@@ -13,7 +13,11 @@ system:
 # a setting that controls a system value (e.g. region.set_nodes) is set here
 # and not under `system:` above; structure.* replaces the old `elements:`
 # block for the same reason.
-settings: {}
+settings:
+  time:
+    reference_year: 2026
+    last_year: 2050
+    interval_between_years: 4
 
 # settings that go into the energy_system folder
 energy_system:
