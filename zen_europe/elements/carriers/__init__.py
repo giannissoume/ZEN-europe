@@ -1,4 +1,5 @@
 from .ammonia import Ammonia
+from .biochar import Biochar
 from .biomass import Biomass
 from .biomethane import Biomethane
 from .carbon import Carbon
@@ -31,6 +32,7 @@ from .wet_biomass import WetBiomass
 
 __all__ = [
     "Biomass",
+    "Biochar",
     "WetBiomass",
     "Electricity",
     "Ammonia",

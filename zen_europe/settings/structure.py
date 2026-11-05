@@ -26,6 +26,7 @@ class StructureSettings(SettingsCategory):
     set_sectors: list[str] = Field(
         default_factory=lambda: [
             "electricity",
+            "biochar_cdr",
             "carbon",
             "gas",
             "heat",

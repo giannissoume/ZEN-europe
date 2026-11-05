@@ -1,0 +1,10 @@
+# Variants of data/zen_europe_config.yaml. Each model is written as its own
+# dataset. bcr_without_application is not the preserved pre-BCR baseline:
+# pyrolysis still produces biochar rather than hard coal.
+models:
+  bcr: {}
+
+  bcr_without_application:
+    settings:
+      structure:
+        remove_technologies: [biochar_application]

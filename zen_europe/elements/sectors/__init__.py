@@ -1,5 +1,6 @@
 from .ammonia import AmmoniaSector
 from .aviation import AviationSector
+from .biochar_cdr import BiocharCDRSector
 from .carbon import CarbonSector
 from .cement import CementSector
 from .district_heating import DistrictHeatingSector
@@ -17,6 +18,7 @@ from .truck_transport import TruckTransportSector
 __all__ = [
     "AmmoniaSector",
     "AviationSector",
+    "BiocharCDRSector",
     "CarbonSector",
     "CementSector",
     "DistrictHeatingSector",

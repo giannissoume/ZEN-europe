@@ -26,7 +26,7 @@ from zen_creator import (
 
 class Pyrolysis(ConversionTechnology):
     """Class containing all data and assumptions for slow pyrolysis of
-    biomass (to hard coal / biochar, oil and district heat)."""
+    biomass (to biochar, oil and district heat)."""
 
     name: str = "pyrolysis"
 
@@ -37,9 +37,11 @@ class Pyrolysis(ConversionTechnology):
 
     def _set_reference_carrier(self) -> Attribute:
         """
-        Sets the reference carrier of pyrolysis to oil.
+        Sets the reference carrier of pyrolysis to biochar.
         """
-        return Attribute(name="reference_carrier", default_value=["oil"], element=self)
+        return Attribute(
+            name="reference_carrier", default_value=["biochar"], element=self
+        )
 
     def _set_input_carrier(self) -> Attribute:
         """
@@ -51,12 +53,11 @@ class Pyrolysis(ConversionTechnology):
 
     def _set_output_carrier(self) -> Attribute:
         """
-        Set the output carrier of pyrolysis to hard coal, district heat and
-        oil.
+        Set the output carrier of pyrolysis to biochar, district heat and oil.
         """
         return Attribute(
             name="output_carrier",
-            default_value=["hard_coal", "district_heat", "oil"],
+            default_value=["biochar", "district_heat", "oil"],
             element=self,
         )
 
@@ -85,7 +86,7 @@ class Pyrolysis(ConversionTechnology):
                 "The conversion factor of pyrolysis is derived "
                 "value based on the DEA technology catalogue for renewable "
                 "fuels (Large scale slow pyrolysis, straw feedstock), "
-                "normalized to the oil reference carrier."
+                "normalized to the biochar reference carrier."
             ),
             metadata=dea_dataset.metadata,
         )
@@ -110,7 +111,7 @@ class Pyrolysis(ConversionTechnology):
         Sets the specific capital expenditure (capex) for pyrolysis.
 
         The technology cost database reports the capex per unit of total
-        pyrolysis output, so it is rebased onto the oil reference carrier.
+        pyrolysis output, so it is rebased onto the biochar reference carrier.
 
         Returns:
             Attribute: An Attribute object containing the specific capex data.
@@ -126,7 +127,7 @@ class Pyrolysis(ConversionTechnology):
         pyrolysis.
 
         The technology cost database reports the fixed opex per unit of total
-        pyrolysis output, so it is rebased onto the oil reference carrier.
+        pyrolysis output, so it is rebased onto the biochar reference carrier.
 
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.

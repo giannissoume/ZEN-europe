@@ -1175,18 +1175,28 @@ class DEA(Dataset[pd.DataFrame]):
 
         Values from the DEA technology catalogue for renewable fuels (Large
         scale slow pyrolysis (20 MW), straw feedstock), normalized to the
-        oil reference carrier (biochar/pyrolysis-oil producing process:
-        0.99 MWh biomass input, 0.04 MWh electricity, 0.22 MWh oil and
-        0.05 MWh district heat, plus 0.4 MWh-equivalent hard coal/biochar
-        output, all per MWh of biomass processed).
+        biochar reference carrier (biochar/pyrolysis-oil producing process:
+        0.96 MWh biomass input, 0.04 MWh electricity, 0.45 MWh biochar,
+        0.19 MWh oil and 0.24 MWh district heat output, all per MWh of
+        total process input).
         https://ens.dk/en/analyses-and-statistics/technology-data-renewable-fuels
         """
-        oil_output = 0.19  # MWh oil / MWh input processed (reference carrier)
+        biochar_output = 0.45  # MWh biochar / MWh total process input
         return [
-            {"biomass": {"default_value": 0.96 / oil_output, "unit": "GWh/GWh"}},
-            {"electricity": {"default_value": 0.04 / oil_output, "unit": "GWh/GWh"}},
-            {"district_heat": {"default_value": 0.24 / oil_output, "unit": "GWh/GWh"}},
-            {"hard_coal": {"default_value": 0.45 / oil_output, "unit": "GWh/GWh"}},
+            {"biomass": {"default_value": 0.96 / biochar_output, "unit": "GWh/GWh"}},
+            {
+                "electricity": {
+                    "default_value": 0.04 / biochar_output,
+                    "unit": "GWh/GWh",
+                }
+            },
+            {
+                "district_heat": {
+                    "default_value": 0.24 / biochar_output,
+                    "unit": "GWh/GWh",
+                }
+            },
+            {"oil": {"default_value": 0.19 / biochar_output, "unit": "GWh/GWh"}},
         ]
 
     def get_conversion_factor_haber_bosch(self):

@@ -7,7 +7,6 @@ from zen_creator import Attribute, ConversionTechnology, SourceInformation
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
 
-from zen_europe.datasets.datasets.financial.dea import DEA
 from zen_europe.utils.constants import Constants
 from zen_europe.utils.utils import (
     calculate_capacity_addition_from_cumulative,
@@ -130,13 +129,7 @@ class BiocharMarketReport(Dataset[pd.DataFrame]):
         attr = element.capacity_existing
         addition = calculate_capacity_addition_from_cumulative(self.data, element)
         data = addition * Constants.BIOCHAR_GWH_PER_TON / 8760  # GW
-        dea_dataset = DEA(source_path=self.source_path)
-        cf = dea_dataset.get_conversion_factor_pyrolysis()
-        biochar_per_oil = next(item for item in cf if "hard_coal" in item)["hard_coal"][
-            "default_value"
-        ]
-
-        capacity_existing = data / biochar_per_oil
+        capacity_existing = data
         capacity_existing = capacity_existing.stack()
         capacity_existing = format_capacity_existing(capacity_existing)
         return attr.set_data(
@@ -147,7 +140,7 @@ class BiocharMarketReport(Dataset[pd.DataFrame]):
                 description=(
                     "The existing capacity of pyrolysis is extracted from the Biochar"
                     " Market Report, and distributed among the mentioned countries."
-                    " The capacity is then converted to biooil output in GW."
+                    " The capacity is then converted to biochar output in GW."
                 ),
                 metadata=self.metadata,
             ),

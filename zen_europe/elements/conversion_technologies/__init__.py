@@ -2,6 +2,8 @@ from .ammonia_ICE_ship import AmmoniaICEShip
 from .anaerobic_digestion import AnaerobicDigestion
 from .BEV import BEV
 from .BF_BOF import BF_BOF
+from .biochar_application import BiocharApplication
+from .biochar_to_hard_coal import BiocharToHardCoal
 from .biomass_boiler import BiomassBoiler
 from .biomass_boiler_DH import BiomassBoilerDH
 from .biomass_plant import BiomassPlant
@@ -73,6 +75,8 @@ __all__ = [
     "Nuclear",
     "OilPlant",
     "BiomassPlant",
+    "BiocharApplication",
+    "BiocharToHardCoal",
     "WastePlant",
     "NaturalGasBoiler",
     "HeatPump",
