@@ -50,7 +50,14 @@ def check_variant_registration() -> None:
     print("Both production variants resolve with BCR preserved.")
 
 
-def build_dataset(name: str, *, enabled: bool = True, above_limit: bool = False):
+def build_dataset(
+    name: str,
+    *,
+    enabled: bool = True,
+    above_limit: bool = False,
+    include_biochar: bool = False,
+    biochar_above_limit: bool = False,
+):
     """Build and write the real ERW classes, with small test-only boundaries."""
     from zen_creator import AssumptionInformation, Dataset, DatasetCollection, Model
     from zen_creator.elements.carriers.carrier import GenericCarrier
@@ -86,6 +93,11 @@ def build_dataset(name: str, *, enabled: bool = True, above_limit: bool = False)
         "conduct_time_series_aggregation": True,
         "use_rolling_horizon": False,
     }
+    if include_biochar:
+        config["settings"]["structure"]["set_carriers"].append("biochar")
+        config["settings"]["structure"]["set_conversion_technologies"].append(
+            "biochar_application"
+        )
     # GenericEnergySystem needs explicit nodes and edges; no fabricated links.
     config["solver"] = {
         "name": "gurobi",
@@ -165,7 +177,30 @@ def build_dataset(name: str, *, enabled: bool = True, above_limit: bool = False)
             "delivery_tkm_per_t": apply_cf["truck_mileage"],
             "removal_tco2_per_t": -float(app.carbon_intensity_technology.default_value),
         }
-        assert coefficients["removal_tco2_per_t"] == 0.0525
+        assert math.isclose(coefficients["removal_tco2_per_t"], 0.0525 * 0.775)
+    if include_biochar:
+        # Isolate downstream delivery/land accounting from pyrolysis in this test.
+        # The production biochar carrier still prohibits imports.
+        from zen_europe.utils.constants import Constants
+
+        biochar = model.elements["biochar"]
+        biochar.availability_import.set_data(
+            default_value=math.inf, unit="MW", source=source
+        )
+        biochar.price_import.set_data(default_value=50, unit="Euro/MWh", source=source)
+        app = model.elements["biochar_application"]
+        biochar_limit = float(app.capacity_limit.df.loc[NODE])
+        biochar_rate = (
+            biochar_limit * 1.01
+            if biochar_above_limit
+            else Constants.BIOCHAR_GWH_PER_TON * 1000
+        )
+        app.capacity_lower_limit.set_data(
+            default_value=biochar_rate, unit="MW", source=source
+        )
+        app.min_full_load_hours_fraction.set_data(default_value=1.0, source=source)
+        coefficients["biochar_forced_mw"] = biochar_rate
+        coefficients["biochar_limit_mw"] = biochar_limit
     model.write()
     # The solver expects these empty containers even in a conversion-only fixture.
     for subset in (
@@ -255,6 +290,44 @@ print('Disabled application: no grinding and no removal.')
     subprocess.run([str(python), "-c", code, str(result)], check=True)
 
 
+def check_coapplication() -> dict:
+    """Check two independent limits, delivery and the production BCR credit."""
+    dataset, coefficients = build_dataset("coapplication", include_biochar=True)
+    result = solve(dataset)
+    python = ROOT.parent / ".conda/zen-solve/bin/python"
+    payload = {"result_dir": str(result), "coeffs": coefficients, "node": NODE}
+    path = result / "coapplication_payload.json"
+    path.write_text(json.dumps(payload))
+    subprocess.run(
+        [str(python), str(HERE / "check_coapplication.py"), str(path)], check=True
+    )
+    dataset, _ = build_dataset(
+        "bcr_above_land_limit", include_biochar=True, biochar_above_limit=True
+    )
+    solve(dataset, infeasible=True)
+    # Binding both separate land ceilings simultaneously rules out an implicit
+    # exclusive-hectare constraint. No actual source parameters are changed.
+    dataset, coefficients = build_dataset(
+        "coapplication_at_limits", include_biochar=True
+    )
+    for technology, unit in (
+        ("basalt_application", "tproduct/h"),
+        ("biochar_application", "MW"),
+    ):
+        folder = dataset / "set_technologies/set_conversion_technologies" / technology
+        values = yaml.safe_load((folder / "attributes.yaml").read_text())
+        capacity_csv = pd.read_csv(folder / "capacity_limit.csv", index_col=0)
+        cap = float(capacity_csv.iloc[0, 0])
+        values["capacity_lower_limit"] = {"default_value": cap, "unit": unit}
+        _write_yaml(folder / "attributes.yaml", values)
+    solve(dataset)
+    return {
+        "active_case": "optimal; both pathways active on the same country area",
+        "bcr_above_limit": "infeasible",
+        "both_at_independent_limits": "optimal",
+    }
+
+
 def main() -> None:
     check_variant_registration()
     dataset, coefficients = build_dataset("erw_enabled")
@@ -263,6 +336,8 @@ def main() -> None:
     check_disabled(solve(dataset))
     dataset, _ = build_dataset("erw_above_land_limit", above_limit=True)
     solve(dataset, infeasible=True)
+    coapp = check_coapplication()
+    summary["coapplication"] = coapp
     summary.update(
         disabled_case="optimal; no activity or removal", land_limit_case="infeasible"
     )

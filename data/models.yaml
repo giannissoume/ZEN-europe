@@ -2,7 +2,8 @@
 # dataset. bcr_without_application is not the preserved pre-BCR baseline:
 # pyrolysis still produces biochar rather than hard coal.
 # basalt_erw is not in the default sector list. The erw variants add it
-# explicitly and keep BCR as it is.
+# explicitly and keep BCR as it is. erw_only disables biochar soil
+# application while retaining pyrolysis fuel production; bcr_erw enables both.
 models:
   bcr: {}
 
@@ -55,3 +56,12 @@ models:
           - truck_transport
           - basalt_erw
         remove_technologies: [basalt_application]
+
+  erw_only:
+    extends: erw
+    settings:
+      structure:
+        remove_technologies: [biochar_application]
+
+  bcr_erw:
+    extends: erw

@@ -25,7 +25,7 @@ class WorldBankArableLand(Dataset[pd.DataFrame]):
         "?format=json&per_page=32767"
     )
     CACHE_FILE = "worldbank_arable_land.csv"
-    YEAR = 2023
+    YEAR = 2024
     TIMEOUT = 60
 
     def __init__(self, source_path: Path | str | None = None):
@@ -40,11 +40,9 @@ class WorldBankArableLand(Dataset[pd.DataFrame]):
             publication_year=datetime.now().year,
             url="https://data.worldbank.org/indicator/AG.LND.ARBL.HA",
             note=(
-                "Indicator AG.LND.ARBL.HA, based on FAO data. The "
-                f"{self.YEAR} value is used. Country codes are mapped with "
-                "GRC→EL and GBR→UK. All reported arable area is treated as "
-                "eligible for basalt application: a permissive proxy, not a "
-                "mapped suitability estimate."
+                "Indicator AG.LND.ARBL.HA, based on FAO data. Country arable "
+                f"area in {self.YEAR} is used for the biochar and basalt application "
+                "allowances, with GRC and GBR mapped to EL and UK."
             ),
         )
 

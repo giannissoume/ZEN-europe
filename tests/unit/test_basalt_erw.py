@@ -19,6 +19,12 @@ from zen_europe.datasets.datasets.technology.beerling_basalt_removal import (
 from zen_europe.datasets.datasets.technology.cobo_basalt_electricity import (
     CoboBasaltElectricity,
 )
+from zen_europe.datasets.datasets.technology.cobo_weathering_efficiency import (
+    CoboWeatheringEfficiency,
+)
+from zen_europe.datasets.datasets.technology.dalgaard_application_diesel import (
+    DalgaardApplicationDiesel,
+)
 from zen_europe.datasets.datasets.technology.netl_basalt_erw_costs import (
     NetlBasaltErwCosts,
 )
@@ -54,6 +60,7 @@ def test_source_scalars(model: Model) -> None:
     netl = NetlBasaltErwCosts(source_path)
 
     assert beerling.get_removal_tco2_per_t_basalt() == 0.0525
+    assert CoboWeatheringEfficiency(source_path).get_cdr_efficiency() == 0.775
     assert electricity.get_electricity_mwh_per_t_basalt() == pytest.approx(
         0.1947445179009531 / 69.9062230049315
     )
@@ -63,16 +70,13 @@ def test_source_scalars(model: Model) -> None:
     assert netl.get_application_cost_usd_per_t() == 6
     assert netl.get_lifetime_years() == 31
     assert netl.get_max_load() == 0.85
-    assert netl.get_diesel_liter_per_t() == pytest.approx(
-        2059 * 3.785411784 / 1190 / 50
-    )
+    assert DalgaardApplicationDiesel(source_path).get_diesel_liter_per_ton() == 0.6
 
 
 def test_grinding_and_application_coefficients(model: Model) -> None:
     parameters = BasaltErwParameters(model.settings, model.source_path)
     grinding = BasaltGrinding(model=model)
     application = BasaltApplication(model=model)
-    netl = NetlBasaltErwCosts(model.source_path)
     money = ECBDollar2Euro(model.source_path).get_dollar2euro(2023) * (
         ECBInflation(model.source_path).get_inflation_rate(
             2023, model.settings.time.price_year
@@ -97,13 +101,16 @@ def test_grinding_and_application_coefficients(model: Model) -> None:
     assert apply_cf["truck_mileage"] == 100.0
     assert apply_cf["diesel"] == pytest.approx(parameters.diesel_gwh_per_tproduct())
     assert apply_cf["diesel"] == pytest.approx(
-        netl.get_diesel_liter_per_t() * Constants.DIESEL_KWH_PER_LITER / 1_000_000
+        0.6 * Constants.DIESEL_KWH_PER_LITER / 1_000_000
     )
 
+    assert apply_cf["diesel"] == pytest.approx(6e-6)
+
     intensity = application._set_carbon_intensity_technology()
-    assert intensity.default_value == pytest.approx(-0.0525)
+    assert intensity.default_value == pytest.approx(-0.0525 * 0.775)
+    assert intensity.default_value == pytest.approx(-0.0406875)
     assert intensity.unit == "ton/tproduct"
-    assert 1000 * 0.0525 == pytest.approx(52.5)
+    assert -1000 * intensity.default_value == pytest.approx(40.6875)
 
     assert grinding._set_capex_specific_conversion().default_value == pytest.approx(
         26_001_000 / capacity * money
@@ -165,6 +172,10 @@ def test_erw_variants_keep_bcr_and_add_basalt_erw() -> None:
     )
     without = model_set.settings_patch("erw_without_application")
     assert without["structure"]["remove_technologies"] == ["basalt_application"]
+    erw_only = model_set.settings_patch("erw_only")
+    assert erw_only["structure"]["set_sectors"] == erw["structure"]["set_sectors"]
+    assert erw_only["structure"]["remove_technologies"] == ["biochar_application"]
+    assert model_set.settings_patch("bcr_erw") == erw
     assert "basalt_erw" in without["structure"]["set_sectors"]
 
 
@@ -178,22 +189,22 @@ def test_application_service_remains_active(
 
 
 def test_application_land_ceiling(model: Model) -> None:
-    """Capacity limit is arable hectares × 50 t/ha/year ÷ 8760."""
+    """Capacity limit is arable hectares × 20 t/ha/year ÷ 8760."""
     from types import SimpleNamespace
 
     model.config = SimpleNamespace(system=SimpleNamespace(set_nodes=["CH", "DE"]))
     application = BasaltApplication(model=model)
     parameters = BasaltErwParameters(model.settings, model.source_path)
     limit = application._set_capacity_limit()
-    arable = parameters._arable.get_arable_land_ha(["CH", "DE"])
+    arable = parameters._arable.get_arable_land_ha(["CH", "DE"], year=2024)
 
     assert limit.unit == "tproduct/h"
     assert list(limit.df.index) == ["CH", "DE"]
     assert limit.df.loc["CH"] == pytest.approx(
-        arable.loc["CH"] * 50.0 / Constants.HOURS_PER_YEAR
+        arable.loc["CH"] * 20.0 / Constants.HOURS_PER_YEAR
     )
     assert limit.df.loc["DE"] == pytest.approx(
-        arable.loc["DE"] * 50.0 / Constants.HOURS_PER_YEAR
+        arable.loc["DE"] * 20.0 / Constants.HOURS_PER_YEAR
     )
     assert limit.df.loc["CH"] < limit.df.loc["DE"]
     # Forced smoke rate of 1 t/h stays below the CH ceiling.
@@ -205,8 +216,11 @@ def test_application_cites_sources(model: Model) -> None:
     expected = {
         "beerling_basalt_removal",
         "cobo_basalt_electricity",
+        "cobo_weathering_efficiency",
         "netl_basalt_erw_costs",
+        "dalgaard_application_diesel",
         "worldbank_arable_land",
+        "dupla_basalt_accumulation",
         "ecb_dollar_to_euro",
         "ecb_inflation",
     }

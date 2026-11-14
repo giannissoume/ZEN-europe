@@ -33,15 +33,10 @@ class CoboBasaltElectricity(Dataset[pd.Series]):
             url="https://zenodo.org/records/19073284",
             publication_year=2026,
             note=(
-                "Workbook EW datasets_v17.03.26.xlsx. Sheet '2. LCIs year 0', "
-                "Basalt, Experimental (field trials), "
-                "Beerling et al. 2024, Base column. Electricity is "
-                f"{self.ELECTRICITY_MWH_PER_TCO2} MWh per tCO2 and rock is "
-                f"{self.ROCK_T_PER_TCO2} t per tCO2. The quotient is "
-                "electricity per tonne of basalt for the selected p80 "
-                "267 µm field case. It is independent of the fixed "
-                "0.0525 tCO2/t application credit. NETL's finer 20 µm "
-                "grinding electricity is not used."
+                "Workbook EW datasets_v17.03.26.xlsx, sheet '2. LCIs year 0', "
+                "field-basalt base case (column H). Electricity (H16) divided "
+                "by rock input (H14) gives crushing and grinding electricity "
+                "per tonne for p80 267 micrometres."
             ),
         )
 

@@ -1,4 +1,4 @@
-"""NETL screening costs and diesel for an igneous-rock ERW plant."""
+"""NETL screening costs for an igneous-rock ERW plant."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from zen_creator.datasets.datasets.metadata import MetaData
 
 
 class NetlBasaltErwCosts(Dataset[pd.Series]):
-    """Capital, fixed costs, purchase price, application cost, and tractor diesel."""
+    """Capital, fixed costs, basalt purchase price, and application cost."""
 
     name = "netl_basalt_erw_costs"
     MONEY_YEAR = 2023
@@ -22,11 +22,6 @@ class NetlBasaltErwCosts(Dataset[pd.Series]):
     APPLICATION_COST_USD_PER_T = 6.0
     LIFETIME_YEARS = 31.0
     MAX_LOAD = 0.85
-    # Exhibit 4-1 land needed; Section 3.10.1: tractor fuel depends on area.
-    DIESEL_US_GALLON_PER_YEAR = 2_059.0
-    LAND_HA = 1_190.0
-    US_GALLON_LITER = 3.785411784
-    APPLICATION_RATE_T_PER_HA_YEAR = 50.0
 
     def __init__(self, source_path: Path | str | None = None):
         super().__init__(source_path=source_path)
@@ -44,19 +39,11 @@ class NetlBasaltErwCosts(Dataset[pd.Series]):
             url="https://www.osti.gov/servlets/purl/2531164",
             doi="10.2172/2531164",
             note=(
-                "Case 1 igneous rock. Exhibit 4-2 reports total plant cost "
-                "26,001 in $/1,000, so 26,001,000 USD, with cost basis "
-                "May 2023. Fixed O&M labour, tax and insurance total "
-                "3,121,279 USD/year. Maintenance material 296,406 USD/year "
-                "is treated once as fixed annual plant cost under this "
-                "proxy and is not charged again per tonne. Rock purchase "
-                "25 USD/t and material application 6 USD/t exclude fuel. "
-                "Diesel 2,059 US gal/year is divided by the Exhibit 4-1 "
-                "land need of 1,190 ha; Section 3.10.1 states tractor fuel "
-                "depends on area covered. The 31-year lifetime is the "
-                "NETL economic project life, used as a technical-life "
-                "proxy. The engineering case is finer than the selected "
-                "field basalt; these are transferred cost proxies."
+                "Case 1 igneous rock, May 2023 USD. Plant cost and annual O&M "
+                "are from Exhibits 4-2 and 4-5; purchase and application costs "
+                "from Sections 3.3 and 3.6. Maintenance material is treated as "
+                "fixed O&M. The finer-grinding plant and 31-year economic life "
+                "are engineering proxies for the selected basalt case."
             ),
         )
 
@@ -104,15 +91,3 @@ class NetlBasaltErwCosts(Dataset[pd.Series]):
     def get_max_load(self) -> float:
         """Maximum load factor of the grinding plant."""
         return self.MAX_LOAD
-
-    def get_diesel_liter_per_t(self) -> float:
-        """Tractor diesel, litres per tonne at 50 t/ha/year.
-
-        Area intensity is 2,059 US gal/year over 1,190 ha. Dividing by the
-        modeled 50 t/ha/year rate converts that area proxy to a per-tonne
-        figure. The NETL 172,740 t/year application quantity is not used.
-        """
-        liter_per_ha = (
-            self.DIESEL_US_GALLON_PER_YEAR * self.US_GALLON_LITER / self.LAND_HA
-        )
-        return liter_per_ha / self.APPLICATION_RATE_T_PER_HA_YEAR

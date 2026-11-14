@@ -1,4 +1,4 @@
-"""Application diesel, retained-carbon credit, and non-fuel service cost."""
+"""Biochar application inputs, retained-carbon credit, costs, and land ceiling."""
 
 from __future__ import annotations
 
@@ -9,18 +9,24 @@ from zen_creator import Attribute, ConversionTechnology, DatasetCollection
 from zen_creator.datasets.datasets.metadata import SourceInformation
 from zen_creator.utils.settings import Settings
 
+from zen_europe.datasets.datasets.energy_system.worldbank_arable_land import (
+    WorldBankArableLand,
+)
 from zen_europe.datasets.datasets.financial.ECB import ECBInflation
 from zen_europe.datasets.datasets.technology.dalgaard_application_diesel import (
     DalgaardApplicationDiesel,
 )
+from zen_europe.datasets.datasets.technology.eu_biochar_application_limit import (
+    EuBiocharApplicationLimit,
+)
 from zen_europe.datasets.datasets.technology.eurofins_straw_biochar import (
     EurofinsStrawBiochar,
 )
+from zen_europe.datasets.datasets.technology.ipcc_biochar_permanence import (
+    IpccBiocharPermanence,
+)
 from zen_europe.datasets.datasets.technology.teichmann_biochar_application_cost import (
     TeichmannBiocharApplicationCost,
-)
-from zen_europe.datasets.datasets.technology.woolf_biochar_permanence import (
-    WoolfBiocharPermanence,
 )
 from zen_europe.utils.constants import Constants
 
@@ -30,6 +36,10 @@ class BiocharApplicationParameters(DatasetCollection):
 
     name = "biochar_application_parameters"
     CO2_PER_CARBON = 44 / 12
+    DELIVERY_TKM_PER_TON = 100.0
+    ELIGIBLE_ARABLE_FRACTION = 1.0
+    # Fixed deployment assumption; independent of the simulated horizon or spacing.
+    DEPLOYMENT_PROGRAMME_YEARS = 25.0
 
     def __init__(self, settings: Settings, source_path: Path | str):
         self.settings = settings
@@ -40,12 +50,14 @@ class BiocharApplicationParameters(DatasetCollection):
             raise ValueError("source_path must be set to load the dataset collection.")
         return {
             "eurofins_straw_biochar": EurofinsStrawBiochar(self.source_path),
-            "woolf_biochar_permanence": WoolfBiocharPermanence(self.source_path),
+            "ipcc_biochar_permanence": IpccBiocharPermanence(self.source_path),
             "dalgaard_application_diesel": DalgaardApplicationDiesel(self.source_path),
             "teichmann_biochar_application_cost": TeichmannBiocharApplicationCost(
                 self.source_path
             ),
             "ecb_inflation": ECBInflation(self.source_path),
+            "worldbank_arable_land": WorldBankArableLand(self.source_path),
+            "eu_biochar_application_limit": EuBiocharApplicationLimit(self.source_path),
         }
 
     @property
@@ -57,8 +69,8 @@ class BiocharApplicationParameters(DatasetCollection):
         return cast(EurofinsStrawBiochar, self.data["eurofins_straw_biochar"])
 
     @property
-    def _woolf(self) -> WoolfBiocharPermanence:
-        return cast(WoolfBiocharPermanence, self.data["woolf_biochar_permanence"])
+    def _ipcc(self) -> IpccBiocharPermanence:
+        return cast(IpccBiocharPermanence, self.data["ipcc_biochar_permanence"])
 
     @property
     def _dalgaard(self) -> DalgaardApplicationDiesel:
@@ -88,7 +100,7 @@ class BiocharApplicationParameters(DatasetCollection):
         """Retained CO2, tonnes per MWh of dry biochar applied."""
         stored_co2_per_ton = (
             self._eurofins.get_organic_carbon_fraction()
-            * self._woolf.get_retained_fraction()
+            * self._ipcc.get_retained_fraction()
             * self.CO2_PER_CARBON
         )
         return stored_co2_per_ton / self._biochar_mwh_per_ton
@@ -106,7 +118,7 @@ class BiocharApplicationParameters(DatasetCollection):
         )
 
     def get_conversion_factor(self, element: ConversionTechnology) -> Attribute:
-        """Diesel consumption of biochar application."""
+        """Field diesel and regional freight per unit of applied dry biochar."""
         return element.conversion_factor.set_data(
             default_value=[
                 {
@@ -114,17 +126,22 @@ class BiocharApplicationParameters(DatasetCollection):
                         "default_value": self.diesel_mwh_per_mwh_biochar(),
                         "unit": "GWh/GWh",
                     }
-                }
+                },
+                {
+                    "truck_mileage": {
+                        "default_value": self.DELIVERY_TKM_PER_TON
+                        / self._biochar_mwh_per_ton,
+                        "unit": "tkm/MWh",
+                    }
+                },
             ],
             source=SourceInformation(
                 description=(
-                    "Biochar application consumes diesel for loading and "
-                    "spreading. Dalgaard et al. report 0.6 L diesel per tonne "
-                    "for manure loading and spreading. That estimate is "
-                    "transferred to dry biochar as an agricultural-operation "
-                    "proxy and is not a measurement of biochar application. "
-                    "It is converted with the repository diesel heating value "
-                    "of 10 kWh/L and the biochar heating value of 25 GJ/t."
+                    "Dalgaard et al. (2001), Table 2 manure loading and spreading "
+                    "is used as a proxy at 0.6 L diesel/t dry biochar. Delivery is "
+                    "assumed to be 100 km, supplied by the existing freight sector. "
+                    "Inputs are converted to the biochar reference using 10 kWh/L "
+                    "diesel and 25 GJ/t biochar."
                 ),
                 metadata=self.metadata,
             ),
@@ -139,19 +156,10 @@ class BiocharApplicationParameters(DatasetCollection):
             unit="ton/MWh",
             source=SourceInformation(
                 description=(
-                    "The removal coefficient is an organic-carbon fraction of "
-                    "0.75, from the Eurofins dry-basis measurement of 75.3% "
-                    "rounded to 0.75, times a 100-year retained fraction of "
-                    "0.82, times 44/12. The Eurofins straw biochar is a proxy "
-                    "for the modeled product. The retained fraction is Woolf "
-                    "et al. Table 3 for high-temperature pyrolysis at 15°C; "
-                    "the published 1000-year value of 0.25 is not used. The "
-                    "credit is applied only when biochar is sent to soil. "
-                    "Later decay is not simulated, no soil-application limit "
-                    "is imposed, and this coefficient is not a complete "
-                    "life-cycle net-removal estimate. The result is converted "
-                    "from tonnes of CO2 per dry tonne with the biochar heating "
-                    "value of 25 GJ/t."
+                    "Eurofins organic carbon of 0.75 times IPCC 100-year retention "
+                    "of 0.80 times 44/12 gives 2.2 tCO2/t dry biochar. "
+                    "Medium-temperature pyrolysis is assumed. The credit is "
+                    "converted at 25 GJ/t and assigned only to soil application."
                 ),
                 metadata=self.metadata,
             ),
@@ -164,18 +172,48 @@ class BiocharApplicationParameters(DatasetCollection):
             unit="Euro/MWh",
             source=SourceInformation(
                 description=(
-                    "€6.23/t biochar from Teichmann, applied here per dry "
-                    "tonne as a modeling assumption. The source does not "
-                    "distinguish fresh and dry biochar mass. The cost excludes "
-                    "fuel and covers loading, wetting, local tractor movement "
-                    "and spreading. No separate distribution-transport cost is "
-                    "modeled; local handling and movement may be embedded in "
-                    "this application-service proxy. Incorporation is assumed "
-                    "to occur during ordinary scheduled tillage. ECB inflation "
-                    f"updates the 2012 price basis to "
-                    f"{self.settings.time.price_year} and does not change the "
-                    "underlying equipment assumptions. The cost is converted "
-                    "per MWh with the biochar heating value of 25 GJ/t."
+                    "Teichmann (2015), Table 34 gives 6.23 Euro/t (2012), used here "
+                    "as a non-fuel application-cost proxy per dry tonne. Costs are "
+                    "adjusted to the model price year with ECB inflation and "
+                    "converted at 25 GJ/t. Diesel and delivery are accounted "
+                    "separately; incorporation uses routine tillage."
+                ),
+                metadata=self.metadata,
+            ),
+        )
+
+    def get_capacity_limit(self, element: ConversionTechnology) -> Attribute:
+        """Annualized land ceiling expressed in biochar-reference MW."""
+        land = cast(WorldBankArableLand, self.data["worldbank_arable_land"])
+        allowance = cast(
+            EuBiocharApplicationLimit, self.data["eu_biochar_application_limit"]
+        )
+        annual_t_per_ha = (
+            allowance.get_cumulative_limit_t_per_ha() / self.DEPLOYMENT_PROGRAMME_YEARS
+        )
+        nodes = list(element.model.config.system.set_nodes)
+        limit = (
+            land.get_arable_land_ha(nodes)
+            * self.ELIGIBLE_ARABLE_FRACTION
+            * annual_t_per_ha
+            * self._biochar_mwh_per_ton
+            / Constants.HOURS_PER_YEAR
+        )
+        limit.name = "capacity_limit"
+        limit.index.name = "node"
+        return element.capacity_limit.set_data(
+            df=limit,
+            unit="MW",
+            source=SourceInformation(
+                description=(
+                    "The EU cumulative ceiling of 50 t/ha is annualized over an "
+                    "assumed fixed 25-year programme and multiplied by World Bank "
+                    f"arable area ({land.YEAR}). Historical applications are zero "
+                    "and all arable land is eligible, including in non-EU countries. "
+                    "The "
+                    "allowance is converted at 25 GJ/t and 8760 h/year. Cumulative "
+                    "stocks are not tracked; ERW has a separate allowance on the "
+                    "same land."
                 ),
                 metadata=self.metadata,
             ),

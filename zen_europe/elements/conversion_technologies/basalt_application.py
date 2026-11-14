@@ -111,7 +111,7 @@ class BasaltApplication(ConversionTechnology):
         return self._parameters().get_application_opex(self)
 
     def _set_capacity_limit(self) -> Attribute:
-        """Limit annual application by country arable land at 50 t/ha."""
+        """Limit annual application by country arable land at 20 t/ha."""
         return self._parameters().get_application_capacity_limit(self)
 
     def _set_capacity_existing(self) -> Attribute:

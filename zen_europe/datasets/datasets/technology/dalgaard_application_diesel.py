@@ -8,7 +8,7 @@ from zen_creator.datasets.datasets.metadata import MetaData
 
 
 class DalgaardApplicationDiesel(Dataset[pd.Series]):
-    """Diesel use transferred from manure spreading to biochar application."""
+    """Agricultural loading-and-spreading diesel for biochar and basalt."""
 
     name = "dalgaard_application_diesel"
     DIESEL_LITER_PER_TON = 0.6
@@ -29,10 +29,9 @@ class DalgaardApplicationDiesel(Dataset[pd.Series]):
             doi="10.1016/S0167-8809(00)00297-8",
             url="https://orgprints.org/id/file/59472",
             note=(
-                "0.6 L diesel per tonne is the manure loading-and-spreading "
-                "estimate. It is transferred to dry biochar as an "
-                "agricultural-operation proxy and is not a measurement of "
-                "biochar application."
+                "Table 2 (p. 54): manure loading and spreading uses 0.6 L "
+                "diesel/t, transferred as an application proxy for dry biochar "
+                "and basalt. Delivery is accounted separately."
             ),
         )
 
@@ -43,5 +42,5 @@ class DalgaardApplicationDiesel(Dataset[pd.Series]):
         return pd.Series(dtype=float)
 
     def get_diesel_liter_per_ton(self) -> float:
-        """Diesel use, litres per tonne of dry biochar."""
+        """Loading and spreading diesel, litres per tonne of applied material."""
         return self.DIESEL_LITER_PER_TON

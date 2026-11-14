@@ -31,12 +31,10 @@ class BeerlingBasaltRemoval(Dataset[pd.Series]):
             publication_year=2024,
             doi="10.1073/pnas.2319436121",
             note=(
-                "Estimated cumulative CDR potential 10.5 ± 3.8 tCO2/ha for "
-                "200 t basalt/ha applied over four years at 50 t/ha/year. "
-                "Central ratio 10.5/200 = 0.0525 tCO2 per t basalt. This is "
-                "not the eventual stoichiometric potential of about "
-                "0.2514 tCO2/t, and the efficiency factor 0.775 is not "
-                "applied again."
+                "Abstract and Fig. 1D: cumulative field-programme CDR potential "
+                "of 10.5 tCO2/ha for 200 t basalt/ha over four years. The "
+                "ratio, 0.0525 tCO2/t, supplies the unadjusted field potential. "
+                "Downstream efficiency is applied in the parameter collection."
             ),
         )
 

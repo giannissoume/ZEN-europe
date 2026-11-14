@@ -32,9 +32,11 @@ class BiocharApplication(ConversionTechnology):
         )
 
     def _set_input_carrier(self) -> Attribute:
-        """Set the input carriers to biochar and diesel."""
+        """Set the inputs to biochar, application diesel, and delivery freight."""
         return Attribute(
-            name="input_carrier", default_value=["biochar", "diesel"], element=self
+            name="input_carrier",
+            default_value=["biochar", "diesel", "truck_mileage"],
+            element=self,
         )
 
     def _set_output_carrier(self) -> Attribute:
@@ -42,7 +44,7 @@ class BiocharApplication(ConversionTechnology):
         return Attribute(name="output_carrier", default_value=[], element=self)
 
     def _set_conversion_factor(self) -> Attribute:
-        """Return diesel use per unit of dry biochar applied."""
+        """Return field diesel and delivery freight per dry biochar applied."""
         return self._parameters().get_conversion_factor(self)
 
     def _set_carbon_intensity_technology(self) -> Attribute:
@@ -118,3 +120,7 @@ class BiocharApplication(ConversionTechnology):
                 ),
             ),
         )
+
+    def _set_capacity_limit(self) -> Attribute:
+        """Limit application with the country's annualized arable-area allowance."""
+        return self._parameters().get_capacity_limit(self)

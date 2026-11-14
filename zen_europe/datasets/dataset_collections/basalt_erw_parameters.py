@@ -20,6 +20,15 @@ from zen_europe.datasets.datasets.technology.beerling_basalt_removal import (
 from zen_europe.datasets.datasets.technology.cobo_basalt_electricity import (
     CoboBasaltElectricity,
 )
+from zen_europe.datasets.datasets.technology.cobo_weathering_efficiency import (
+    CoboWeatheringEfficiency,
+)
+from zen_europe.datasets.datasets.technology.dalgaard_application_diesel import (
+    DalgaardApplicationDiesel,
+)
+from zen_europe.datasets.datasets.technology.dupla_basalt_accumulation import (
+    DuplaBasaltAccumulation,
+)
 from zen_europe.datasets.datasets.technology.netl_basalt_erw_costs import (
     NetlBasaltErwCosts,
 )
@@ -31,7 +40,7 @@ class BasaltErwParameters(DatasetCollection):
 
     name = "basalt_erw_parameters"
     DELIVERY_TKM_PER_T = 100.0
-    APPLICATION_RATE_T_PER_HA_YEAR = 50.0
+    APPLICATION_RATE_T_PER_HA_YEAR = 20.0
 
     def __init__(self, settings: Settings, source_path: Path | str):
         self.settings = settings
@@ -43,8 +52,11 @@ class BasaltErwParameters(DatasetCollection):
         return {
             "beerling_basalt_removal": BeerlingBasaltRemoval(self.source_path),
             "cobo_basalt_electricity": CoboBasaltElectricity(self.source_path),
+            "cobo_weathering_efficiency": CoboWeatheringEfficiency(self.source_path),
             "netl_basalt_erw_costs": NetlBasaltErwCosts(self.source_path),
+            "dalgaard_application_diesel": DalgaardApplicationDiesel(self.source_path),
             "worldbank_arable_land": WorldBankArableLand(self.source_path),
+            "dupla_basalt_accumulation": DuplaBasaltAccumulation(self.source_path),
             "ecb_dollar_to_euro": ECBDollar2Euro(self.source_path),
             "ecb_inflation": ECBInflation(self.source_path),
         }
@@ -58,8 +70,16 @@ class BasaltErwParameters(DatasetCollection):
         return cast(CoboBasaltElectricity, self.data["cobo_basalt_electricity"])
 
     @property
+    def _efficiency(self) -> CoboWeatheringEfficiency:
+        return cast(CoboWeatheringEfficiency, self.data["cobo_weathering_efficiency"])
+
+    @property
     def _netl(self) -> NetlBasaltErwCosts:
         return cast(NetlBasaltErwCosts, self.data["netl_basalt_erw_costs"])
+
+    @property
+    def _dalgaard(self) -> DalgaardApplicationDiesel:
+        return cast(DalgaardApplicationDiesel, self.data["dalgaard_application_diesel"])
 
     @property
     def _arable(self) -> WorldBankArableLand:
@@ -85,10 +105,17 @@ class BasaltErwParameters(DatasetCollection):
         """Grinding electricity, GWh per tonne of ground basalt."""
         return self._electricity.get_electricity_mwh_per_t_basalt() / 1000.0
 
+    def removal_tco2_per_t_basalt(self) -> float:
+        """Efficiency-adjusted removal, excluding operational emissions."""
+        return (
+            self._beerling.get_removal_tco2_per_t_basalt()
+            * self._efficiency.get_cdr_efficiency()
+        )
+
     def diesel_gwh_per_tproduct(self) -> float:
         """Application diesel, GWh per tonne of ground basalt."""
         return (
-            self._netl.get_diesel_liter_per_t()
+            self._dalgaard.get_diesel_liter_per_ton()
             * Constants.DIESEL_KWH_PER_LITER
             / 1_000_000.0
         )
@@ -114,12 +141,10 @@ class BasaltErwParameters(DatasetCollection):
             ],
             source=SourceInformation(
                 description=(
-                    "One tonne of purchased basalt yields one tonne of ground "
-                    "basalt. Electricity is the Cobo et al. (2026) field/base LCI "
-                    "quotient of 0.1947445179009531 MWh/tCO2 and "
-                    "69.9062230049315 t rock/tCO2, written per tonne of "
-                    "basalt. NETL's finer 20 µm grinding electricity is not "
-                    "used."
+                    "Crushing and grinding electricity is derived from the Cobo et "
+                    "al. (2026) field-basalt inventory, expressed per tonne of "
+                    "rock. One tonne of purchased basalt yields one tonne of ground "
+                    "basalt."
                 ),
                 metadata=self.metadata,
             ),
@@ -146,16 +171,10 @@ class BasaltErwParameters(DatasetCollection):
             ],
             source=SourceInformation(
                 description=(
-                    "Delivery is an assumed 100 km European scenario, equal to "
-                    "100 tkm per tonne. It is not the workbook's 215 km case. "
-                    "Truck energy and costs stay in the existing freight "
-                    "representation. Application diesel is the NETL area "
-                    "proxy: 2,059 US gal/year over 1,190 ha (Exhibit 4-1 land "
-                    "need; Section 3.10.1 states tractor fuel depends on area "
-                    "covered), converted to litres per hectare and divided by "
-                    "50 t/ha/year. The heating value is the repository "
-                    "constant of 10 kWh/L. The NETL 172,740 t/year line is "
-                    "not used."
+                    "Delivery is assumed to be 100 km and is supplied by the "
+                    "existing freight sector. Loading and spreading use the "
+                    "Dalgaard et al. (2001), Table 2 manure-operation proxy of 0.6 "
+                    "L diesel per tonne, converted at 10 kWh/L."
                 ),
                 metadata=self.metadata,
             ),
@@ -166,26 +185,16 @@ class BasaltErwParameters(DatasetCollection):
     ) -> Attribute:
         """Fixed gross negative emissions of soil-applied basalt."""
         return element.carbon_intensity_technology.set_data(
-            default_value=-self._beerling.get_removal_tco2_per_t_basalt(),
+            default_value=-self.removal_tco2_per_t_basalt(),
             unit="ton/tproduct",
             source=SourceInformation(
                 description=(
-                    "This field-program removal-potential ratio is transferred "
-                    "to European deployment as a proxy. Credit is assigned in "
-                    "the application year; subsequent weathering is not "
-                    "tracked or credited. Immediate accounting can favour "
-                    "late-horizon deployment. The fixed yield omits additional "
-                    "long-term uptake; these approximations are not assumed to "
-                    "cancel. The coefficient is 0.0525 tCO2 per tonne of "
-                    "basalt from Beerling et al. (2024): 10.5 tCO2/ha over "
-                    "200 t/ha. The attribute unit is ton/tproduct, matching "
-                    "cement and zen-garden's emissions-[mass] convention; the "
-                    "numeric value is tonnes of CO2 per tonne of basalt. It is "
-                    "not the eventual 0.2514 tCO2/t potential, the factor "
-                    "0.775 is not applied again, and no temperature "
-                    "correction is added. Electricity, freight, and diesel "
-                    "emissions are accounted through the existing model rather "
-                    "than deducted again from this gross coefficient."
+                    "Beerling et al. (2024) field potential of 10.5/200 tCO2/t "
+                    "is multiplied by the Cobo et al. (2026) efficiency of "
+                    "0.775, giving 0.0406875 tCO2/t. This combined proxy is "
+                    "credited immediately; subsequent uptake is not tracked. "
+                    "Operational emissions are accounted separately through "
+                    "the electricity, diesel and freight inputs."
                 ),
                 metadata=self.metadata,
             ),
@@ -204,15 +213,11 @@ class BasaltErwParameters(DatasetCollection):
             unit="Euro/(tproduct/h)",
             source=SourceInformation(
                 description=(
-                    "NETL total plant cost of 26,001,000 USD (May 2023) is "
-                    "divided by the assumed nameplate capacity of "
-                    "250,000/8760 t/h. Owner overnight costs, as-spent "
-                    "financing, fixed-charge rates, and annualized USD/tCO2 "
-                    "costs are not added. ECB dollar-to-euro and inflation "
-                    f"update the 2023 dollar basis to "
-                    f"{self.settings.time.price_year}. The NETL plant is a "
-                    "finer engineering case than the selected field basalt; "
-                    "this is a transferred cost proxy."
+                    "NETL total plant cost is divided by the assumed nameplate "
+                    "capacity of 250,000/8760 t/h and converted from 2023 USD to "
+                    "the model price year using ECB data. The finer-grinding plant "
+                    "is used as an engineering proxy; no annualized capital charge "
+                    "is added."
                 ),
                 metadata=self.metadata,
             ),
@@ -231,11 +236,10 @@ class BasaltErwParameters(DatasetCollection):
             unit="Euro/(tproduct/h)",
             source=SourceInformation(
                 description=(
-                    "NETL fixed labour, tax and insurance of 3,121,279 USD/year "
-                    "plus maintenance material of 296,406 USD/year are treated "
-                    "once as fixed annual plant cost and divided by "
-                    "250,000/8760 t/h. Maintenance material is not charged "
-                    "again per tonne. ECB conversion matches the capital cost."
+                    "NETL annual labour, tax and insurance costs plus maintenance "
+                    "material are divided by the assumed nameplate capacity of "
+                    "250,000/8760 t/h. Maintenance material is treated as fixed "
+                    "O&M. Costs are converted from 2023 USD using ECB data."
                 ),
                 metadata=self.metadata,
             ),
@@ -248,10 +252,8 @@ class BasaltErwParameters(DatasetCollection):
             unit="1",
             source=SourceInformation(
                 description=(
-                    "The 31-year lifetime is transferred from the NETL "
-                    "economic project life as a proxy. It is not a technical "
-                    "life reported for the plant and it is not the "
-                    "weathering horizon."
+                    "The NETL economic project life of 31 years is used as a "
+                    "technical-lifetime proxy for grinding."
                 ),
                 metadata=self.metadata,
             ),
@@ -264,9 +266,9 @@ class BasaltErwParameters(DatasetCollection):
             unit="1",
             source=SourceInformation(
                 description=(
-                    "Maximum load 0.85 limits throughput of a nameplate "
-                    "250,000 t/year plant to 212,500 t/year. It is not used "
-                    "to shrink the specific capital or fixed costs."
+                    "The NETL capacity factor of 0.85 is used as maximum load. "
+                    "Applied to the assumed nameplate of 250,000 t/year, this "
+                    "allows up to 212,500 t/year."
                 ),
                 metadata=self.metadata,
             ),
@@ -282,10 +284,10 @@ class BasaltErwParameters(DatasetCollection):
             unit="Euro/tproduct",
             source=SourceInformation(
                 description=(
-                    "NETL material-application cost of 6 USD/t excludes fuel "
-                    "and transport. Using it at 50 t/ha is a per-tonne proxy, "
-                    "not a NETL field rate. ECB conversion matches the plant "
-                    "costs."
+                    "NETL field application costs of 6 USD/t exclude fuel and "
+                    "delivery. The per-tonne cost is used as a proxy at the "
+                    "selected application rate and converted from 2023 USD using "
+                    "ECB data."
                 ),
                 metadata=self.metadata,
             ),
@@ -299,11 +301,9 @@ class BasaltErwParameters(DatasetCollection):
             unit="Euro/tproduct",
             source=SourceInformation(
                 description=(
-                    "NETL rock purchase price of 25 USD/t, converted with ECB "
-                    "dollar-to-euro and inflation. Purchase cost is kept "
-                    "separate from plant investment and application cost. "
-                    "Upstream quarry emissions are excluded by the model "
-                    "boundary."
+                    "The NETL rock purchase price of 25 USD/t is converted from "
+                    "2023 USD using ECB data. Preparation and delivery are "
+                    "accounted separately; upstream quarry emissions are excluded."
                 ),
                 metadata=self.metadata,
             ),
@@ -312,7 +312,7 @@ class BasaltErwParameters(DatasetCollection):
     def get_application_capacity_limit(
         self, element: ConversionTechnology
     ) -> Attribute:
-        """Annual application ceiling from arable land at 50 t/ha/year."""
+        """Annual application allowance from arable land at 20 t/ha/year."""
         nodes = list(element.model.config.system.set_nodes)
         arable_ha = self._arable.get_arable_land_ha(nodes)
         limit = (
@@ -325,13 +325,13 @@ class BasaltErwParameters(DatasetCollection):
             unit="tproduct/h",
             source=SourceInformation(
                 description=(
-                    "Capacity limit is country arable land from World Bank "
-                    "AG.LND.ARBL.HA (2023) times 50 t/ha/year, divided by "
-                    "8760 hours so that with max_load 1 the annual "
-                    "throughput cannot exceed that product. All reported "
-                    "arable area is treated as eligible. No cumulative soil "
-                    "stock is tracked. BCR and ERW may coexist; there is no "
-                    "shared exclusive-hectare constraint."
+                    f"World Bank arable area ({self._arable.YEAR}) is multiplied by "
+                    "an assumed allowance of 20 t/ha/year and divided by 8760. "
+                    "The lower loading is motivated by repeated-application "
+                    "risks discussed by Dupla et al. (2023), not a demonstrated "
+                    "soil or regulatory limit. All arable land is eligible; "
+                    "cumulative stocks are not tracked. Biochar has a separate "
+                    "allowance on the same land."
                 ),
                 metadata=self.metadata,
             ),

@@ -119,7 +119,7 @@ class CarbonConstraints(DatasetCollection):
     def calculate_sector_emissions(self, energy_system: EnergySystem) -> pd.Series:
         """
         Calculate the CO2 emissions of the modeled sectors, in Gt by year,
-        summed over the EEA GHG inventory and the DESNZ GHG inventory (UK).
+        summed over selected nodes in the EEA and DESNZ (UK) inventories.
         """
         eea_ghg_inventory = cast(
             EEAGreenhouseGasInventory, self.data["eea_ghg_inventory"]
@@ -129,11 +129,15 @@ class CarbonConstraints(DatasetCollection):
         )
         set_nodes = energy_system.config.system.set_nodes
         sectors = list(energy_system.model.sectors)
-        emissions_sectors_EU = eea_ghg_inventory.get_emissions_sectors(
-            sectors, set_nodes
-        )
-        emissions_sectors_UK = desnz_ghg_inventory.get_emissions_sectors(sectors)
-        return emissions_sectors_EU.sum() + emissions_sectors_UK.sum()
+        eea_nodes = [node for node in set_nodes if node != "UK"]
+        if not eea_nodes and "UK" in set_nodes:
+            return desnz_ghg_inventory.get_emissions_sectors(sectors).sum()
+        emissions = eea_ghg_inventory.get_emissions_sectors(sectors, eea_nodes).sum()
+        if "UK" in set_nodes:
+            emissions = (
+                emissions + desnz_ghg_inventory.get_emissions_sectors(sectors).sum()
+            )
+        return emissions
 
     def calculate_total_emissions(self, energy_system: EnergySystem) -> pd.Series:
         """
@@ -149,9 +153,13 @@ class CarbonConstraints(DatasetCollection):
         )
         set_nodes = energy_system.config.system.set_nodes
         sectors = list(energy_system.model.sectors)
-        emissions_total_EU = eea_ghg_inventory.get_emissions_total(set_nodes)
-        emissions_total_UK = desnz_ghg_inventory.get_emissions_total(sectors)
-        return emissions_total_EU + emissions_total_UK
+        eea_nodes = [node for node in set_nodes if node != "UK"]
+        if not eea_nodes and "UK" in set_nodes:
+            return desnz_ghg_inventory.get_emissions_total(sectors)
+        emissions = eea_ghg_inventory.get_emissions_total(eea_nodes)
+        if "UK" in set_nodes:
+            emissions = emissions + desnz_ghg_inventory.get_emissions_total(sectors)
+        return emissions
 
     def get_remaining_global_carbon_budget(self) -> float:
         """

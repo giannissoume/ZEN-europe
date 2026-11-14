@@ -255,7 +255,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-
 # ERW generated test inputs, solver results, and downloaded land cache
 /tests/integration/erw_smoke/dataset/
 /tests/integration/erw_smoke/outputs/

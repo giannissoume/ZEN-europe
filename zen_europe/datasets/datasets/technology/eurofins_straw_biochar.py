@@ -28,10 +28,9 @@ class EurofinsStrawBiochar(Dataset[pd.Series]):
                 "2026/06/Straw-Eurofins-report.pdf"
             ),
             note=(
-                "Report AR-22-FR-045377-01. Organic carbon is 75.3% of dry "
-                "mass, rounded to 0.75 tC per t dry biochar. The measured "
-                "straw biochar is a proxy for the modeled product and is not "
-                "the same sample as the DEA pyrolysis sheet."
+                "Report AR-22-FR-045377-01, p. 2: organic carbon is 75.3% of "
+                "dry mass, rounded to 0.75. This straw-biochar sample is used "
+                "as a proxy for the DEA product."
             ),
         )
 

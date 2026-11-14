@@ -14,7 +14,13 @@ class BiocharCDRSector(Sector):
     """Biochar carbon dioxide removal pathway."""
 
     name = "biochar_cdr"
-    required_sectors = ["electricity", "district_heating", "refining"]
+    required_sectors = [
+        "electricity",
+        "district_heating",
+        "refining",
+        "truck_transport",
+        "passenger_transport",
+    ]
 
     def __init__(self) -> None:
         super().__init__()

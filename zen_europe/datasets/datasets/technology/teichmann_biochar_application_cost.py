@@ -8,7 +8,7 @@ from zen_creator.datasets.datasets.metadata import MetaData
 
 
 class TeichmannBiocharApplicationCost(Dataset[pd.Series]):
-    """Non-fuel equipment and labour cost of biochar application."""
+    """Equipment and labour cost used as a non-fuel application proxy."""
 
     name = "teichmann_biochar_application_cost"
     COST_EUR_PER_TON = 6.23
@@ -32,10 +32,10 @@ class TeichmannBiocharApplicationCost(Dataset[pd.Series]):
                 "825836247.pdf"
             ),
             note=(
-                "Equipment-and-labour cost of 6.23 Euro per tonne in 2012, "
-                "excluding fuel. The source does not distinguish fresh and "
-                "dry biochar mass. The model applies the figure per dry "
-                "tonne as a modeling assumption."
+                "Table 34, note c (p. 69): equipment and labour cost of 6.23 "
+                "Euro/t (2012), derived from Shackley et al. (2011), Box 3. "
+                "Used as a non-fuel proxy per dry tonne; fuel exclusion and the "
+                "dry-mass basis are model assumptions."
             ),
         )
 

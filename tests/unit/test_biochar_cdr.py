@@ -15,14 +15,17 @@ from zen_europe.datasets.datasets.financial.ECB import ECBInflation
 from zen_europe.datasets.datasets.technology.dalgaard_application_diesel import (
     DalgaardApplicationDiesel,
 )
+from zen_europe.datasets.datasets.technology.eu_biochar_application_limit import (
+    EuBiocharApplicationLimit,
+)
 from zen_europe.datasets.datasets.technology.eurofins_straw_biochar import (
     EurofinsStrawBiochar,
 )
+from zen_europe.datasets.datasets.technology.ipcc_biochar_permanence import (
+    IpccBiocharPermanence,
+)
 from zen_europe.datasets.datasets.technology.teichmann_biochar_application_cost import (
     TeichmannBiocharApplicationCost,
-)
-from zen_europe.datasets.datasets.technology.woolf_biochar_permanence import (
-    WoolfBiocharPermanence,
 )
 from zen_europe.elements.carriers.biochar import Biochar
 from zen_europe.elements.conversion_technologies.biochar_application import (
@@ -78,13 +81,12 @@ def test_application_source_scalars(model: Model) -> None:
     source_path = model.source_path
 
     assert EurofinsStrawBiochar(source_path).get_organic_carbon_fraction() == 0.75
-    woolf = WoolfBiocharPermanence(source_path)
-    assert woolf.get_retained_fraction() == 0.82
-    assert woolf.UNUSED_RETAINED_FRACTION_1000Y == 0.25
+    assert IpccBiocharPermanence(source_path).get_retained_fraction() == 0.80
     assert DalgaardApplicationDiesel(source_path).get_diesel_liter_per_ton() == 0.6
     teichmann = TeichmannBiocharApplicationCost(source_path)
     assert teichmann.get_cost_eur_per_ton() == 6.23
     assert teichmann.get_cost_year() == 2012
+    assert EuBiocharApplicationLimit(source_path).get_cumulative_limit_t_per_ha() == 50
 
 
 def test_biochar_application_coefficients(model: Model) -> None:
@@ -103,8 +105,9 @@ def test_biochar_application_coefficients(model: Model) -> None:
     assert diesel == pytest.approx(0.000864)
     assert diesel == pytest.approx(parameters.diesel_mwh_per_mwh_biochar())
     assert conversion.default_value[0]["diesel"]["unit"] == "GWh/GWh"
-    assert intensity.default_value == pytest.approx(-0.32472)
+    assert intensity.default_value == pytest.approx(-0.3168)
     assert intensity.unit == "ton/MWh"
+    assert -intensity.default_value * biochar_mwh_per_ton == pytest.approx(2.2)
     assert intensity.default_value == pytest.approx(
         -parameters.stored_co2_ton_per_mwh_biochar()
     )
@@ -152,10 +155,12 @@ def test_biochar_application_cites_its_sources(model: Model) -> None:
     application = BiocharApplication(model=model)
     expected_names = {
         "eurofins_straw_biochar",
-        "woolf_biochar_permanence",
+        "ipcc_biochar_permanence",
         "dalgaard_application_diesel",
         "teichmann_biochar_application_cost",
         "ecb_inflation",
+        "worldbank_arable_land",
+        "eu_biochar_application_limit",
     }
 
     for setter in (
@@ -181,3 +186,64 @@ def test_application_comparison_removes_only_the_application_technology() -> Non
     assert model_set.settings_patch("bcr_without_application") == {
         "structure": {"remove_technologies": ["biochar_application"]}
     }
+
+
+def test_biochar_application_delivery_units(model: Model) -> None:
+    application = BiocharApplication(model=model)
+    conversion = application._set_conversion_factor()
+    factors = _conversion_factor_by_carrier(conversion.default_value)
+    assert application.input_carrier.default_value == [
+        "biochar",
+        "diesel",
+        "truck_mileage",
+    ]
+    # One dry tonne has 25/3.6 MWh and requires exactly 100 tkm.
+    assert factors["truck_mileage"] == pytest.approx(14.4)
+    assert factors["truck_mileage"] * (25 / 3.6) == pytest.approx(100)
+    assert factors["diesel"] == pytest.approx(0.000864)
+    assert "truck_transport" in BiocharCDRSector.required_sectors
+    assert "passenger_transport" in BiocharCDRSector.required_sectors
+
+
+@pytest.mark.parametrize(
+    "reference_year,last_year,interval",
+    [(2026, 2050, 4), (2030, 2050, 2), (2040, 2050, 1)],
+)
+def test_biochar_land_cap_reuses_area_without_excluding_erw(
+    model: Model, reference_year: int, last_year: int, interval: int
+) -> None:
+    from types import SimpleNamespace
+
+    from zen_europe.datasets.dataset_collections.basalt_erw_parameters import (
+        BasaltErwParameters,
+    )
+    from zen_europe.datasets.datasets.energy_system.worldbank_arable_land import (
+        WorldBankArableLand,
+    )
+
+    model.settings.time.reference_year = reference_year
+    model.settings.time.last_year = last_year
+    model.settings.time.interval_between_years = interval
+    model.config = SimpleNamespace(system=SimpleNamespace(set_nodes=["CH", "DE"]))
+    application = BiocharApplication(model=model)
+    area = WorldBankArableLand(model.source_path).get_arable_land_ha(
+        ["CH", "DE"], year=2024
+    )
+    land = application._set_capacity_limit()
+    assert land.unit == "MW"
+    assert land.df.to_dict() == pytest.approx((area * 2 * (25 / 3.6) / 8760).to_dict())
+    # Convert the generated MW ceiling back to annual mass per hectare.
+    annual_t_per_ha = land.df * 8760 / (25 / 3.6) / area
+    assert annual_t_per_ha.to_dict() == pytest.approx({"CH": 2.0, "DE": 2.0})
+    assert (annual_t_per_ha * 25).to_dict() == pytest.approx({"CH": 50.0, "DE": 50.0})
+    assert application.max_load.default_value == 1
+    # BCR reads the shared area but does not consume it or change ERW's ceiling.
+    from zen_europe.elements.conversion_technologies.basalt_application import (
+        BasaltApplication,
+    )
+
+    erw = BasaltApplication(model=model)
+    limit = BasaltErwParameters(
+        model.settings, model.source_path
+    ).get_application_capacity_limit(erw)
+    assert limit.df.to_dict() == pytest.approx((area * 20 / 8760).to_dict())
