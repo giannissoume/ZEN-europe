@@ -255,3 +255,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+
+# ERW generated test inputs, solver results, and downloaded land cache
+/tests/integration/erw_smoke/dataset/
+/tests/integration/erw_smoke/outputs/
+/tests/integration/erw_smoke/_tmp_model/
+/data/raw_data/01-energy_system/worldbank_arable_land/*.csv

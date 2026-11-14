@@ -1,4 +1,5 @@
 from .ammonia import Ammonia
+from .basalt import Basalt
 from .biochar import Biochar
 from .biomass import Biomass
 from .biomethane import Biomethane
@@ -10,6 +11,7 @@ from .district_heat import DistrictHeat
 from .electricity import Electricity
 from .fuel_for_cement import FuelForCement
 from .gasoline import Gasoline
+from .ground_basalt import GroundBasalt
 from .hard_coal import HardCoal
 from .heat import Heat
 from .hydrogen import Hydrogen
@@ -31,8 +33,10 @@ from .waste import Waste
 from .wet_biomass import WetBiomass
 
 __all__ = [
+    "Basalt",
     "Biomass",
     "Biochar",
+    "GroundBasalt",
     "WetBiomass",
     "Electricity",
     "Ammonia",

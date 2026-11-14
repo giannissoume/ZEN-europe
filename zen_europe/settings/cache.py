@@ -22,6 +22,7 @@ class CacheSettings(SettingsCategory):
     overwrite_desnz_ghg_inventory: bool = False
     overwrite_worldbank_co2_emissions: bool = False
     overwrite_worldbank_population: bool = False
+    overwrite_worldbank_arable_land: bool = False
     overwrite_ecb: bool = False
     overwrite_jrc_idees: bool = False
     overwrite_unece: bool = False
@@ -96,6 +97,7 @@ CACHE_PROVIDERS = (
             "01-energy_system/global_carbon_budget/*.csv",
             "01-energy_system/worldbank_co2_emissions/*.csv",
             "01-energy_system/worldbank_population/*.csv",
+            "01-energy_system/worldbank_arable_land/*.csv",
         ),
     ),
     CacheProvider(

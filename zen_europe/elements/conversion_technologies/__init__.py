@@ -1,5 +1,7 @@
 from .ammonia_ICE_ship import AmmoniaICEShip
 from .anaerobic_digestion import AnaerobicDigestion
+from .basalt_application import BasaltApplication
+from .basalt_grinding import BasaltGrinding
 from .BEV import BEV
 from .BF_BOF import BF_BOF
 from .biochar_application import BiocharApplication
@@ -75,6 +77,8 @@ __all__ = [
     "Nuclear",
     "OilPlant",
     "BiomassPlant",
+    "BasaltApplication",
+    "BasaltGrinding",
     "BiocharApplication",
     "BiocharToHardCoal",
     "WastePlant",

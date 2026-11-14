@@ -1,6 +1,8 @@
 # Variants of data/zen_europe_config.yaml. Each model is written as its own
 # dataset. bcr_without_application is not the preserved pre-BCR baseline:
 # pyrolysis still produces biochar rather than hard coal.
+# basalt_erw is not in the default sector list. The erw variants add it
+# explicitly and keep BCR as it is.
 models:
   bcr: {}
 
@@ -8,3 +10,48 @@ models:
     settings:
       structure:
         remove_technologies: [biochar_application]
+
+  erw:
+    settings:
+      structure:
+        set_sectors:
+          - electricity
+          - biochar_cdr
+          - carbon
+          - gas
+          - heat
+          - district_heating
+          - hydrogen
+          - ammonia
+          - cement
+          - methanol
+          - refining
+          - aviation
+          - shipping
+          - steel
+          - passenger_transport
+          - truck_transport
+          - basalt_erw
+
+  erw_without_application:
+    settings:
+      structure:
+        set_sectors:
+          - electricity
+          - biochar_cdr
+          - carbon
+          - gas
+          - heat
+          - district_heating
+          - hydrogen
+          - ammonia
+          - cement
+          - methanol
+          - refining
+          - aviation
+          - shipping
+          - steel
+          - passenger_transport
+          - truck_transport
+          - basalt_erw
+        remove_technologies: [basalt_application]
