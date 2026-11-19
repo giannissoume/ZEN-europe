@@ -1,0 +1,5 @@
+parameter,value,unit,source_location
+discharge_t_per_h,30,t/h,Distribution D25: rounded from 30.024624
+fuel_t_per_h,1.408,t/h,Distribution D35
+fuel_mwh_per_t,11.63,MWh/t,Distribution D36
+uptake_mol_per_mol,1.5,1,Paper/SI uptake range 1.2-1.8

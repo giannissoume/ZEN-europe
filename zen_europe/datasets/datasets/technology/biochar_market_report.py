@@ -16,10 +16,7 @@ from zen_europe.utils.utils import (
 
 
 class BiocharMarketReport(Dataset[pd.DataFrame]):
-    """
-    Dataset class for the biochar market report.
-
-    """
+    """Biochar production capacity from the European Biochar Market Report."""
 
     name = "biochar_market_report"
 
@@ -41,10 +38,11 @@ class BiocharMarketReport(Dataset[pd.DataFrame]):
 
     def _set_data(self) -> pd.DataFrame:
         """
-        Biochar production by regions/country, p. 46.
+        Annual biochar production capacity by region, in tonnes/year.
 
-        The values for 2019 and 2020 are from the 2023 - 2024 report,
-        while the values for 2021-2026 are from the 2025-2026 report.
+        Values for 2019-2020 are from the 2023-2024 report. Values for
+        2021-2026 are estimated from the 2025-2026 report's chart
+        (printed p. 49, PDF p. 47).
         """
         biochar_capacity = {
             2019: {
@@ -96,8 +94,7 @@ class BiocharMarketReport(Dataset[pd.DataFrame]):
                 "other countries": 32500,
             },
         }
-        # the relevant countries from p. 46, assume equal distribution of countries in
-        # regions
+        # Split each regional total equally among the selected countries.
         countries_nordics = ["Denmark", "Finland", "Sweden"]
         countries_austria_switzerland = ["Austria", "Switzerland"]
         countries_other = ["France", "Spain", "United Kingdom"]
@@ -122,9 +119,9 @@ class BiocharMarketReport(Dataset[pd.DataFrame]):
     # -------- methods ------------------------
     def get_capacity_existing(self, element: ConversionTechnology) -> Attribute:
         """
-        Returns the existing capacity from the biochar market report.
+        Convert annual biochar production capacity to GW of biochar output.
 
-        The
+        Use production capacity rather than actual annual production.
         """
         attr = element.capacity_existing
         addition = calculate_capacity_addition_from_cumulative(self.data, element)
@@ -138,9 +135,12 @@ class BiocharMarketReport(Dataset[pd.DataFrame]):
             unit="GW",
             source=SourceInformation(
                 description=(
-                    "The existing capacity of pyrolysis is extracted from the Biochar"
-                    " Market Report, and distributed among the mentioned countries."
-                    " The capacity is then converted to biochar output in GW."
+                    "Existing pyrolysis capacity is based on regional chart estimates "
+                    "from the Biochar Market Report, split equally among the selected "
+                    "countries. Annual biochar capacity is converted to GW using "
+                    "25 GJ/t and 8760 h/year. The report covers plants intended for "
+                    "carbon removal; model output can supply soil application or fuel "
+                    "substitution."
                 ),
                 metadata=self.metadata,
             ),

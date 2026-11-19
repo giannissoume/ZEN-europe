@@ -26,16 +26,18 @@ class BiocharApplication(ConversionTechnology):
         )
 
     def _set_reference_carrier(self) -> Attribute:
-        """Set the reference carrier to applied biochar."""
+        """Separate service capacity from the pyrolysis diffusion group."""
         return Attribute(
-            name="reference_carrier", default_value=["biochar"], element=self
+            name="reference_carrier",
+            default_value=["biochar_for_application"],
+            element=self,
         )
 
     def _set_input_carrier(self) -> Attribute:
         """Set the inputs to biochar, application diesel, and delivery freight."""
         return Attribute(
             name="input_carrier",
-            default_value=["biochar", "diesel", "truck_mileage"],
+            default_value=["biochar_for_application", "diesel", "truck_mileage"],
             element=self,
         )
 

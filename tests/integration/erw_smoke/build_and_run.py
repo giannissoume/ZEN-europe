@@ -3,7 +3,8 @@
 Only the energy-system boundary and electricity/diesel/freight imports are
 synthetic. Basalt carriers and technologies are built and written by the
 production classes through ZEN-creator, without rewriting their attributes.
-Forced application and unconstrained diffusion are confined to test copies.
+Forced application and synthetic biochar imports are confined to test copies.
+Nonzero service emissions test gross uptake separately from net emissions.
 """
 
 from __future__ import annotations
@@ -29,14 +30,14 @@ def _write_yaml(path: Path, data: object) -> None:
 
 
 def check_variant_registration() -> None:
-    """Resolve both actual model variants without downloading sector data."""
+    """Resolve all four ERW variants without downloading sector data."""
     from zen_creator import Model
     from zen_creator.utils.settings import ModelSet, Settings
 
     from zen_europe.model_creator import DATA_PATH
 
     variants = ModelSet.load_from_yaml(DATA_PATH / "models.yaml")
-    for name in ("erw", "erw_without_application"):
+    for name in ("erw_only", "bcr_erw", "erw_oae", "bcr_erw_oae"):
         settings = Settings.load_from_yaml(
             DATA_PATH / "zen_europe_config.yaml", patch=variants.settings_patch(name)
         )
@@ -45,15 +46,19 @@ def check_variant_registration() -> None:
         )
         assert "basalt_grinding" in model.elements
         assert "basalt" in model.elements and "ground_basalt" in model.elements
-        assert ("basalt_application" in model.elements) == (name == "erw")
-        assert "biochar_application" in model.elements
-    print("Both production variants resolve with BCR preserved.")
+        assert "basalt_application" in model.elements
+        assert ("biochar_application" in model.elements) == name.startswith("bcr_")
+        assert ("lime_ocean_application" in model.elements) == ("oae" in name)
+        assert "pyrolysis" in model.elements
+        assert sum(c.name == "diesel" for c in model.carriers.values()) == 1
+    print("All four ERW variants resolve with the intended application switches.")
 
 
 def build_dataset(
     name: str,
     *,
     enabled: bool = True,
+    force: bool = True,
     above_limit: bool = False,
     include_biochar: bool = False,
     biochar_above_limit: bool = False,
@@ -127,10 +132,10 @@ def build_dataset(
         source=source,
     )
     # Import services here only; production uses the real electricity/freight sectors.
-    for name_carrier, power, energy, price in (
-        ("electricity", "GW", "GWh", 50000.0),
-        ("diesel", "GW", "GWh", 80000.0),
-        ("truck_mileage", "tkm/h", "tkm", 0.1),
+    for name_carrier, power, energy, price, intensity in (
+        ("electricity", "GW", "GWh", 50000.0, 100.0),
+        ("diesel", "GW", "GWh", 80000.0, 267.0),
+        ("truck_mileage", "tkm/h", "tkm", 0.1, 0.0001),
     ):
         carrier = GenericCarrier(name_carrier, model, power_unit=power)
         carrier.availability_import.set_data(
@@ -140,24 +145,33 @@ def build_dataset(
             default_value=price, unit=f"Euro/{energy}", source=source
         )
         carrier.carbon_intensity_carrier_import.set_data(
-            default_value=0, unit=f"ton/{energy}", source=source
+            default_value=intensity, unit=f"ton/{energy}", source=source
         )
         if name_carrier == "electricity":
-            # A small neutral demand avoids an all-zero RHS in the disabled case.
+            # A small background demand avoids an all-zero RHS in the disabled case.
             carrier.demand.set_data(default_value=0.001, unit=power, source=source)
         model.elements[name_carrier] = carrier
     model.build()
-    coefficients = {}
-    for tech in model.conversion_technologies.values():
-        tech.max_diffusion_rate.set_data(default_value=math.inf, source=source)
+    from zen_europe.datasets.datasets.financial.ECB import ECBDollar2Euro, ECBInflation
+
+    money = ECBDollar2Euro(model.source_path).get_dollar2euro(2023) * (
+        ECBInflation(model.source_path).get_inflation_rate(2023, 2025)
+    )
+    coefficients = {
+        "enabled": enabled,
+        "forced_rate": 0.0,
+        "money_factor": money,
+    }
     if enabled:
         app = model.elements["basalt_application"]
         limit = float(app.capacity_limit.df.loc[NODE])
-        rate = limit * 1.01 if above_limit else FORCED_RATE_T_PER_H
+        rate = (limit * 1.01 if above_limit else FORCED_RATE_T_PER_H) if force else 0.0
         app.capacity_lower_limit.set_data(
             default_value=rate, unit="tproduct/h", source=source
         )
-        app.min_full_load_hours_fraction.set_data(default_value=1.0, source=source)
+        app.min_full_load_hours_fraction.set_data(
+            default_value=1.0 if force else 0.0, source=source
+        )
         grinding = model.elements["basalt_grinding"]
         apply_cf = {
             k: v["default_value"]
@@ -169,14 +183,18 @@ def build_dataset(
             for row in grinding.conversion_factor.default_value
             for k, v in row.items()
         }
-        coefficients = {
-            "forced_rate": rate,
-            "capacity_limit": limit,
-            "electricity_gwh_per_t": grind_cf["electricity"],
-            "diesel_gwh_per_t": apply_cf["diesel"],
-            "delivery_tkm_per_t": apply_cf["truck_mileage"],
-            "removal_tco2_per_t": -float(app.carbon_intensity_technology.default_value),
-        }
+        coefficients.update(
+            {
+                "forced_rate": rate,
+                "capacity_limit": limit,
+                "electricity_gwh_per_t": grind_cf["electricity"],
+                "diesel_gwh_per_t": apply_cf["diesel"],
+                "delivery_tkm_per_t": apply_cf["truck_mileage"],
+                "removal_tco2_per_t": -float(
+                    app.carbon_intensity_technology.default_value
+                ),
+            }
+        )
         assert math.isclose(coefficients["removal_tco2_per_t"], 0.0525 * 0.775)
     if include_biochar:
         # Isolate downstream delivery/land accounting from pyrolysis in this test.
@@ -198,7 +216,9 @@ def build_dataset(
         app.capacity_lower_limit.set_data(
             default_value=biochar_rate, unit="MW", source=source
         )
-        app.min_full_load_hours_fraction.set_data(default_value=1.0, source=source)
+        app.min_full_load_hours_fraction.set_data(
+            default_value=1.0 if force else 0.0, source=source
+        )
         coefficients["biochar_forced_mw"] = biochar_rate
         coefficients["biochar_limit_mw"] = biochar_limit
     model.write()
@@ -262,38 +282,14 @@ def check_results(result: Path, coefficients: dict) -> dict:
     if completed.returncode != 0:
         raise AssertionError(completed.stdout + completed.stderr)
     print(completed.stdout)
-    return {
-        "solver_status": 2,
-        "annual_basalt_t": coefficients["forced_rate"] * 8760,
-        "gross_removal_tco2": coefficients["forced_rate"]
-        * 8760
-        * coefficients["removal_tco2_per_t"],
-    }
-
-
-def check_disabled(result: Path) -> None:
-    python = ROOT.parent / ".conda/zen-solve/bin/python"
-    code = """
-import sys
-import xarray as xr
-from pathlib import Path
-with xr.open_dataset(Path(sys.argv[1])/'variables.nc') as ds:
-    assert 'basalt_application' not in ds.coords['set_conversion_technologies'].values
-    assert abs(float(ds['carbon_emissions_annual'].sum())) < 1e-10
-    flow = ds['flow_conversion_output'].sel(
-        set_conversion_technologies='basalt_grinding',
-        set_output_carriers='ground_basalt',
-    )
-    assert abs(float(flow.sum())) < 1e-10
-print('Disabled application: no grinding and no removal.')
-"""
-    subprocess.run([str(python), "-c", code, str(result)], check=True)
+    return json.loads(completed.stdout)
 
 
 def check_coapplication() -> dict:
     """Check two independent limits, delivery and the production BCR credit."""
     dataset, coefficients = build_dataset("coapplication", include_biochar=True)
     result = solve(dataset)
+    check_results(result, coefficients)
     python = ROOT.parent / ".conda/zen-solve/bin/python"
     payload = {"result_dir": str(result), "coeffs": coefficients, "node": NODE}
     path = result / "coapplication_payload.json"
@@ -320,7 +316,18 @@ def check_coapplication() -> dict:
         cap = float(capacity_csv.iloc[0, 0])
         values["capacity_lower_limit"] = {"default_value": cap, "unit": unit}
         _write_yaml(folder / "attributes.yaml", values)
-    solve(dataset)
+        if technology == "basalt_application":
+            coefficients["forced_rate"] = cap
+        else:
+            coefficients["biochar_forced_mw"] = cap
+    result = solve(dataset)
+    check_results(result, coefficients)
+    payload = {"result_dir": str(result), "coeffs": coefficients, "node": NODE}
+    path = result / "coapplication_payload.json"
+    path.write_text(json.dumps(payload))
+    subprocess.run(
+        [str(python), str(HERE / "check_coapplication.py"), str(path)], check=True
+    )
     return {
         "active_case": "optimal; both pathways active on the same country area",
         "bcr_above_limit": "infeasible",
@@ -332,12 +339,16 @@ def main() -> None:
     check_variant_registration()
     dataset, coefficients = build_dataset("erw_enabled")
     summary = check_results(solve(dataset), coefficients)
-    dataset, _ = build_dataset("erw_disabled", enabled=False)
-    check_disabled(solve(dataset))
+    dataset, coefficients = build_dataset("erw_zero", force=False)
+    zero = check_results(solve(dataset), coefficients)
+    dataset, coefficients = build_dataset("erw_disabled", enabled=False)
+    disabled = check_results(solve(dataset), coefficients)
     dataset, _ = build_dataset("erw_above_land_limit", above_limit=True)
     solve(dataset, infeasible=True)
     coapp = check_coapplication()
     summary["coapplication"] = coapp
+    summary["zero_case"] = zero
+    summary["disabled_case_results"] = disabled
     summary.update(
         disabled_case="optimal; no activity or removal", land_limit_case="infeasible"
     )

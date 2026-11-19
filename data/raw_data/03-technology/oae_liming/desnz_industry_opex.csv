@@ -1,0 +1,2 @@
+parameter,value,unit,source_location
+fixed_opex_fraction,0.025,1/year,PDF p.23

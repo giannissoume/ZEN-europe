@@ -1,0 +1,2 @@
+parameter,value,unit,source_location
+electricity_kwh_per_t_hydrate,5.8,kWh/t,Section 2.3

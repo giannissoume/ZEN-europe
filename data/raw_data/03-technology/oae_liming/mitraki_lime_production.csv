@@ -1,0 +1,17 @@
+parameter,value,unit,source_location
+limestone_t_per_t_cao,1.94,t/t,Main Table 1
+gas_gj_per_t_cao,3.76,GJ/t,SI Table S8 NGOxy-CC
+kiln_electricity_kwh_per_t_cao,30,kWh/t,SI Table S8
+cpu_electricity_kwh_per_t_cao,302,kWh/t,SI Table S8
+asu_electricity_kwh_per_t_cao,61,kWh/t,SI Table S8
+process_co2_t_per_t_cao,0.786,tCO2/t,Main Table 1
+capture_fraction,0.9,1,Main capture assumptions
+kiln_annual_charge,11.56,EUR2025/tCaO,SI Table S10
+cpu_annual_charge,19.51,EUR2025/tCaO,SI Table S10
+asu_annual_charge,7.83,EUR2025/tCaO,SI Table S10
+kiln_interest,0.06,1,SI Table S4
+cpu_interest,0.085,1,SI Table S4
+asu_interest,0.06,1,SI Table S4
+kiln_lifetime,20,year,SI Table S4
+cpu_lifetime,30,year,SI Table S4
+asu_lifetime,40,year,SI Table S4

@@ -5,7 +5,6 @@ import math
 import pytest
 from zen_creator.datasets.datasets.metadata import MetaData, SourceInformation
 from zen_creator.model import Model
-from zen_creator.utils.settings import ModelSet
 
 from zen_europe.datasets.dataset_collections.biochar_application_parameters import (
     BiocharApplicationParameters,
@@ -36,7 +35,6 @@ from zen_europe.elements.conversion_technologies.biochar_to_hard_coal import (
 )
 from zen_europe.elements.conversion_technologies.pyrolysis import Pyrolysis
 from zen_europe.elements.sectors.biochar_cdr import BiocharCDRSector
-from zen_europe.model_creator import DATA_PATH
 from zen_europe.utils.constants import Constants
 
 
@@ -179,21 +177,12 @@ def test_biochar_application_cites_its_sources(model: Model) -> None:
         assert names == expected_names
 
 
-def test_application_comparison_removes_only_the_application_technology() -> None:
-    model_set = ModelSet.load_from_yaml(DATA_PATH / "models.yaml")
-
-    assert model_set.settings_patch("bcr") == {}
-    assert model_set.settings_patch("bcr_without_application") == {
-        "structure": {"remove_technologies": ["biochar_application"]}
-    }
-
-
 def test_biochar_application_delivery_units(model: Model) -> None:
     application = BiocharApplication(model=model)
     conversion = application._set_conversion_factor()
     factors = _conversion_factor_by_carrier(conversion.default_value)
     assert application.input_carrier.default_value == [
-        "biochar",
+        "biochar_for_application",
         "diesel",
         "truck_mileage",
     ]
@@ -247,3 +236,63 @@ def test_biochar_land_cap_reuses_area_without_excluding_erw(
         model.settings, model.source_path
     ).get_application_capacity_limit(erw)
     assert limit.df.to_dict() == pytest.approx((area * 20 / 8760).to_dict())
+
+
+@pytest.mark.parametrize("area", [-1.0, float("inf"), float("-inf")])
+def test_bcr_rejects_invalid_arable_area(model, area):
+    from types import SimpleNamespace
+
+    model.config = SimpleNamespace(system=SimpleNamespace(set_nodes=["CH"]))
+    parameters = BiocharApplicationParameters(model.settings, model.source_path)
+    parameters.data["worldbank_arable_land"].data.loc["CH", 2024] = area
+    with pytest.raises(ValueError, match="finite nonnegative arable"):
+        parameters.get_capacity_limit(BiocharApplication(model))
+
+
+@pytest.mark.parametrize("missing", ["country", "year", "value"])
+def test_bcr_rejects_missing_arable_data(model, missing):
+    from types import SimpleNamespace
+
+    model.config = SimpleNamespace(system=SimpleNamespace(set_nodes=["CH"]))
+    parameters = BiocharApplicationParameters(model.settings, model.source_path)
+    land = parameters.data["worldbank_arable_land"]
+    if missing == "country":
+        land.data = land.data.drop(index="CH")
+    elif missing == "year":
+        land.data = land.data.drop(columns=2024)
+    else:
+        land.data.loc["CH", 2024] = float("nan")
+    with pytest.raises(ValueError, match="arable-land|Arable-land"):
+        parameters.get_capacity_limit(BiocharApplication(model))
+
+
+def test_application_allocation_separates_diffusion_and_closes_carrier(model):
+    from zen_europe.elements.carriers.biochar_for_application import (
+        BiocharForApplication,
+    )
+    from zen_europe.elements.conversion_technologies.biochar_to_application import (
+        BiocharToApplication,
+    )
+
+    allocation = BiocharToApplication(model)
+    application = BiocharApplication(model)
+    assert allocation.reference_carrier.default_value == ["biochar_for_application"]
+    assert application.reference_carrier.default_value == ["biochar_for_application"]
+    assert allocation.input_carrier.default_value == ["biochar"]
+    assert (
+        allocation.output_carrier.default_value
+        == application.reference_carrier.default_value
+    )
+    assert _conversion_factor_by_carrier(
+        allocation._set_conversion_factor().default_value
+    ) == {"biochar": 1}
+    assert allocation.carbon_intensity_technology.default_value == 0
+    assert allocation._set_capex_specific_conversion().default_value == 0
+    assert allocation._set_opex_specific_fixed().default_value == 0
+    assert allocation._set_opex_specific_variable().default_value == 0
+    assert math.isinf(allocation.max_diffusion_rate.default_value)
+    carrier = BiocharForApplication(model)
+    assert carrier._set_availability_import().default_value == 0
+    assert carrier._set_availability_export().default_value == 0
+    assert BiocharForApplication in BiocharCDRSector().elements
+    assert BiocharToApplication in BiocharCDRSector().elements

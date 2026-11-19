@@ -142,8 +142,9 @@ class Pyrolysis(ConversionTechnology):
         Sets the specific variable operational expenditure (opex) for
         pyrolysis.
 
-        DEA does not report the specific variable opex for pyrolysis anymore,
-        so this method returns a default Attribute object.
+        DEA combines fixed and variable O&M in an annual output-capacity charge.
+        The inherited approximation assigns that combined row to fixed O&M;
+        no additional variable charge is applied here.
 
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.

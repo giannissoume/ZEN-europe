@@ -5,6 +5,7 @@ from .basalt_grinding import BasaltGrinding
 from .BEV import BEV
 from .BF_BOF import BF_BOF
 from .biochar_application import BiocharApplication
+from .biochar_to_application import BiocharToApplication
 from .biochar_to_hard_coal import BiocharToHardCoal
 from .biomass_boiler import BiomassBoiler
 from .biomass_boiler_DH import BiomassBoilerDH
@@ -35,6 +36,8 @@ from .hydrogen_FC_ship import HydrogenFCShip
 from .ICE_diesel import ICE_diesel
 from .ICE_petrol import ICE_petrol
 from .lignite_coal_plant import LigniteCoalPlant
+from .lime_ocean_application import LimeOceanApplication
+from .lime_production_ccs import LimeProductionCCS
 from .lng_terminal import LNGTerminal
 from .methanation import Methanation
 from .methanol_from_biomass import MethanolFromBiomass
@@ -66,6 +69,8 @@ from .wind_offshore import WindOffshore
 from .wind_onshore import WindOnshore
 
 __all__ = [
+    "LimeOceanApplication",
+    "LimeProductionCCS",
     "Photovoltaics",
     "DistrictHeatingGrid",
     "WindOffshore",
@@ -81,6 +86,7 @@ __all__ = [
     "BasaltGrinding",
     "BiocharApplication",
     "BiocharToHardCoal",
+    "BiocharToApplication",
     "WastePlant",
     "NaturalGasBoiler",
     "HeatPump",

@@ -1,6 +1,7 @@
 from .ammonia import Ammonia
 from .basalt import Basalt
 from .biochar import Biochar
+from .biochar_for_application import BiocharForApplication
 from .biomass import Biomass
 from .biomethane import Biomethane
 from .carbon import Carbon
@@ -14,9 +15,11 @@ from .gasoline import Gasoline
 from .ground_basalt import GroundBasalt
 from .hard_coal import HardCoal
 from .heat import Heat
+from .hydrated_lime import HydratedLime
 from .hydrogen import Hydrogen
 from .kerosene import Kerosene
 from .lignite import Lignite
+from .limestone import Limestone
 from .lng import LNG
 from .methanol import Methanol
 from .naphtha import Naphtha
@@ -33,9 +36,12 @@ from .waste import Waste
 from .wet_biomass import WetBiomass
 
 __all__ = [
+    "HydratedLime",
+    "Limestone",
     "Basalt",
     "Biomass",
     "Biochar",
+    "BiocharForApplication",
     "GroundBasalt",
     "WetBiomass",
     "Electricity",

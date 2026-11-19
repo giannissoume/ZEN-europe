@@ -1,8 +1,12 @@
 from zen_creator import Sector
 
 from zen_europe.elements.carriers.biochar import Biochar
+from zen_europe.elements.carriers.biochar_for_application import BiocharForApplication
 from zen_europe.elements.conversion_technologies.biochar_application import (
     BiocharApplication,
+)
+from zen_europe.elements.conversion_technologies.biochar_to_application import (
+    BiocharToApplication,
 )
 from zen_europe.elements.conversion_technologies.biochar_to_hard_coal import (
     BiocharToHardCoal,
@@ -28,5 +32,7 @@ class BiocharCDRSector(Sector):
             Pyrolysis,
             BiocharToHardCoal,
             BiocharApplication,
+            BiocharToApplication,
+            BiocharForApplication,
             Biochar,
         ]

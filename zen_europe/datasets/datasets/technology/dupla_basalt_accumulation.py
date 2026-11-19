@@ -32,7 +32,7 @@ class DuplaBasaltAccumulation(Dataset[pd.Series]):
             note=(
                 "Sections 3.1-3.2 (pp. 6-7) discuss trace-element accumulation "
                 "under repeated basalt applications. Used to motivate a lower "
-                "deployment allowance; the model's 20 t/ha/year is an "
+                "deployment allowance; the default 20 t/ha/year allowance is an "
                 "assumption, not a threshold established by this study."
             ),
         )

@@ -35,7 +35,11 @@ class TeichmannBiocharApplicationCost(Dataset[pd.Series]):
                 "Table 34, note c (p. 69): equipment and labour cost of 6.23 "
                 "Euro/t (2012), derived from Shackley et al. (2011), Box 3. "
                 "Used as a non-fuel proxy per dry tonne; fuel exclusion and the "
-                "dry-mass basis are model assumptions."
+                "dry-mass basis are model assumptions. Teichmann does not distinguish "
+                "fresh and dry biochar weight. Shackley Box 3 includes wetting, "
+                "short transport to the field, and tractor operating costs; it "
+                "does not establish fuel exclusion. Separate diesel and 100 km "
+                "delivery retain the approved proxy, with possible cost overlap."
             ),
         )
 

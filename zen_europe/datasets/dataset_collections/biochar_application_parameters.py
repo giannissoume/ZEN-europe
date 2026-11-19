@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
+import numpy as np
 from zen_creator import Attribute, ConversionTechnology, DatasetCollection
 from zen_creator.datasets.datasets.metadata import SourceInformation
 from zen_creator.utils.settings import Settings
@@ -36,10 +37,6 @@ class BiocharApplicationParameters(DatasetCollection):
 
     name = "biochar_application_parameters"
     CO2_PER_CARBON = 44 / 12
-    DELIVERY_TKM_PER_TON = 100.0
-    ELIGIBLE_ARABLE_FRACTION = 1.0
-    # Fixed deployment assumption; independent of the simulated horizon or spacing.
-    DEPLOYMENT_PROGRAMME_YEARS = 25.0
 
     def __init__(self, settings: Settings, source_path: Path | str):
         self.settings = settings
@@ -129,7 +126,7 @@ class BiocharApplicationParameters(DatasetCollection):
                 },
                 {
                     "truck_mileage": {
-                        "default_value": self.DELIVERY_TKM_PER_TON
+                        "default_value": self.settings.biochar_cdr.delivery_km
                         / self._biochar_mwh_per_ton,
                         "unit": "tkm/MWh",
                     }
@@ -139,7 +136,8 @@ class BiocharApplicationParameters(DatasetCollection):
                 description=(
                     "Dalgaard et al. (2001), Table 2 manure loading and spreading "
                     "is used as a proxy at 0.6 L diesel/t dry biochar. Delivery is "
-                    "assumed to be 100 km, supplied by the existing freight sector. "
+                    f"assumed to be {self.settings.biochar_cdr.delivery_km:g} km, "
+                    "supplied by the existing freight sector. "
                     "Inputs are converted to the biochar reference using 10 kWh/L "
                     "diesel and 25 GJ/t biochar."
                 ),
@@ -173,7 +171,8 @@ class BiocharApplicationParameters(DatasetCollection):
             source=SourceInformation(
                 description=(
                     "Teichmann (2015), Table 34 gives 6.23 Euro/t (2012), used here "
-                    "as a non-fuel application-cost proxy per dry tonne. Costs are "
+                    "as an assumed non-fuel application-cost proxy per dry tonne. "
+                    "Costs are "
                     "adjusted to the model price year with ECB inflation and "
                     "converted at 25 GJ/t. Diesel and delivery are accounted "
                     "separately; incorporation uses routine tillage."
@@ -189,12 +188,20 @@ class BiocharApplicationParameters(DatasetCollection):
             EuBiocharApplicationLimit, self.data["eu_biochar_application_limit"]
         )
         annual_t_per_ha = (
-            allowance.get_cumulative_limit_t_per_ha() / self.DEPLOYMENT_PROGRAMME_YEARS
+            allowance.get_cumulative_limit_t_per_ha()
+            / self.settings.biochar_cdr.deployment_period_years
         )
         nodes = list(element.model.config.system.set_nodes)
+        arable_ha = land.get_arable_land_ha(nodes)
+        invalid = ~np.isfinite(arable_ha) | (arable_ha < 0)
+        if invalid.any():
+            raise ValueError(
+                "BCR requires finite nonnegative arable areas; invalid nodes: "
+                f"{arable_ha.index[invalid].tolist()}"
+            )
         limit = (
-            land.get_arable_land_ha(nodes)
-            * self.ELIGIBLE_ARABLE_FRACTION
+            arable_ha
+            * self.settings.biochar_cdr.eligible_arable_fraction
             * annual_t_per_ha
             * self._biochar_mwh_per_ton
             / Constants.HOURS_PER_YEAR
@@ -206,14 +213,16 @@ class BiocharApplicationParameters(DatasetCollection):
             unit="MW",
             source=SourceInformation(
                 description=(
-                    "The EU cumulative ceiling of 50 t/ha is annualized over an "
-                    "assumed fixed 25-year programme and multiplied by World Bank "
-                    f"arable area ({land.YEAR}). Historical applications are zero "
-                    "and all arable land is eligible, including in non-EU countries. "
-                    "The "
-                    "allowance is converted at 25 GJ/t and 8760 h/year. Cumulative "
-                    "stocks are not tracked; ERW has a separate allowance on the "
-                    "same land."
+                    "The EU cumulative certification benchmark of 50 t/ha is "
+                    "annualized over an assumed fixed "
+                    f"{self.settings.biochar_cdr.deployment_period_years:g}-year "
+                    "programme and multiplied by World Bank "
+                    f"arable area ({land.YEAR}) and an eligible fraction of "
+                    f"{self.settings.biochar_cdr.eligible_arable_fraction:g}, "
+                    "including in non-EU countries. Historical applications "
+                    "are zero. The allowance is converted at 25 GJ/t and 8760 h/year."
+                    "Cumulative stocks are not tracked; ERW has a separate"
+                    "allowance on the same land."
                 ),
                 metadata=self.metadata,
             ),

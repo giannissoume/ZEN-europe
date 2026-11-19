@@ -23,6 +23,7 @@ class CacheSettings(SettingsCategory):
     overwrite_worldbank_co2_emissions: bool = False
     overwrite_worldbank_population: bool = False
     overwrite_worldbank_arable_land: bool = False
+    overwrite_marine_regions_eez: bool = False
     overwrite_ecb: bool = False
     overwrite_jrc_idees: bool = False
     overwrite_unece: bool = False
@@ -57,6 +58,11 @@ class CacheProvider:
 # classified above, but never cache-deletion targets. Every entry below is produced
 # by ZEN-europe from a remote source or another local input.
 CACHE_PROVIDERS = (
+    CacheProvider(
+        "marine_regions_eez",
+        CacheArtifactKind.DOWNLOADED_SOURCE,
+        ("01-energy_system/marine_regions/eez-attributes.json",),
+    ),
     CacheProvider(
         "entsoe",
         CacheArtifactKind.DOWNLOADED_SOURCE,

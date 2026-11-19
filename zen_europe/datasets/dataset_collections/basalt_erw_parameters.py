@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
+import numpy as np
 import pandas as pd
 from zen_creator import Attribute, ConversionTechnology, DatasetCollection
 from zen_creator.datasets.datasets.metadata import SourceInformation
@@ -39,8 +40,6 @@ class BasaltErwParameters(DatasetCollection):
     """Convert basalt ERW source values to the model's mass-based units."""
 
     name = "basalt_erw_parameters"
-    DELIVERY_TKM_PER_T = 100.0
-    APPLICATION_RATE_T_PER_HA_YEAR = 20.0
 
     def __init__(self, settings: Settings, source_path: Path | str):
         self.settings = settings
@@ -158,7 +157,7 @@ class BasaltErwParameters(DatasetCollection):
             default_value=[
                 {
                     "truck_mileage": {
-                        "default_value": self.DELIVERY_TKM_PER_T,
+                        "default_value": self.settings.basalt_erw.delivery_km,
                         "unit": "tkm/tproduct",
                     }
                 },
@@ -171,8 +170,9 @@ class BasaltErwParameters(DatasetCollection):
             ],
             source=SourceInformation(
                 description=(
-                    "Delivery is assumed to be 100 km and is supplied by the "
-                    "existing freight sector. Loading and spreading use the "
+                    "Delivery is assumed to be "
+                    f"{self.settings.basalt_erw.delivery_km:g} km and is supplied "
+                    "by the existing freight sector. Loading and spreading use the "
                     "Dalgaard et al. (2001), Table 2 manure-operation proxy of 0.6 "
                     "L diesel per tonne, converted at 10 kWh/L."
                 ),
@@ -312,11 +312,20 @@ class BasaltErwParameters(DatasetCollection):
     def get_application_capacity_limit(
         self, element: ConversionTechnology
     ) -> Attribute:
-        """Annual application allowance from arable land at 20 t/ha/year."""
+        """Annual deployment proxy from eligible arable land and application rate."""
         nodes = list(element.model.config.system.set_nodes)
         arable_ha = self._arable.get_arable_land_ha(nodes)
+        invalid = ~np.isfinite(arable_ha) | (arable_ha < 0)
+        if invalid.any():
+            raise ValueError(
+                "ERW requires finite nonnegative arable areas; invalid nodes: "
+                f"{arable_ha.index[invalid].tolist()}"
+            )
         limit = (
-            arable_ha * self.APPLICATION_RATE_T_PER_HA_YEAR / Constants.HOURS_PER_YEAR
+            arable_ha
+            * self.settings.basalt_erw.eligible_arable_fraction
+            * self.settings.basalt_erw.application_t_per_ha_year
+            / Constants.HOURS_PER_YEAR
         )
         limit.name = "capacity_limit"
         limit.index.name = "node"
@@ -326,10 +335,13 @@ class BasaltErwParameters(DatasetCollection):
             source=SourceInformation(
                 description=(
                     f"World Bank arable area ({self._arable.YEAR}) is multiplied by "
-                    "an assumed allowance of 20 t/ha/year and divided by 8760. "
-                    "The lower loading is motivated by repeated-application "
+                    "an assumed allowance of "
+                    f"{self.settings.basalt_erw.application_t_per_ha_year:g} t/ha/year "
+                    "and divided by 8760. "
+                    "The default loading is motivated by repeated-application "
                     "risks discussed by Dupla et al. (2023), not a demonstrated "
-                    "soil or regulatory limit. All arable land is eligible; "
+                    "soil or regulatory limit. The eligible arable fraction is "
+                    f"{self.settings.basalt_erw.eligible_arable_fraction:g}; "
                     "cumulative stocks are not tracked. Biochar has a separate "
                     "allowance on the same land."
                 ),

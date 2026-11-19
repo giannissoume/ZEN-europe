@@ -1,0 +1,3 @@
+parameter,value,unit,source_location
+package_usd,3300000,USD2025,Slide 19
+capacity_t_per_h,15,t/h,Slide 19; product basis assumed

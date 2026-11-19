@@ -1,0 +1,64 @@
+[
+  {
+    "case": "forced_fossil",
+    "condition": "optimal",
+    "applied_t_per_year": 8760.0,
+    "gross_uptake_tco2": 7804.202429149798,
+    "stored_tco2": 5948.448302536033,
+    "annual_net_emissions_tco2": -5477.821539263007,
+    "balance_error_tco2": 0.0
+  },
+  {
+    "case": "zero_application",
+    "condition": "optimal",
+    "applied_t_per_year": 0.0,
+    "gross_uptake_tco2": 0.0,
+    "stored_tco2": 0.0,
+    "annual_net_emissions_tco2": 0.8760000000000001,
+    "balance_error_tco2": 0.0
+  },
+  {
+    "case": "no_application",
+    "condition": "optimal",
+    "applied_t_per_year": 0.0,
+    "gross_uptake_tco2": 0.0,
+    "stored_tco2": 0.0,
+    "annual_net_emissions_tco2": 0.8760000000000001,
+    "balance_error_tco2": 0.0
+  },
+  {
+    "case": "forced_synthetic",
+    "condition": "optimal",
+    "applied_t_per_year": 8760.0,
+    "gross_uptake_tco2": 7804.202429149798,
+    "stored_tco2": 4799.672986600225,
+    "annual_net_emissions_tco2": -5727.488707926389,
+    "balance_error_tco2": 0.0
+  },
+  {
+    "case": "forced_biogenic",
+    "condition": "optimal",
+    "applied_t_per_year": 8760.0,
+    "gross_uptake_tco2": 7804.202429149798,
+    "stored_tco2": 5948.448302536033,
+    "annual_net_emissions_tco2": -6876.264023862197,
+    "balance_error_tco2": 0.0
+  },
+  {
+    "case": "no_storage",
+    "condition": "infeasible"
+  },
+  {
+    "case": "landlocked",
+    "condition": "optimal",
+    "applied_t_per_year": 0.0,
+    "gross_uptake_tco2": 0.0,
+    "stored_tco2": 0.0,
+    "annual_net_emissions_tco2": 0.8760000000000001,
+    "balance_error_tco2": 0.0
+  },
+  {
+    "case": "above_marine_allowance",
+    "condition": "infeasible"
+  }
+]

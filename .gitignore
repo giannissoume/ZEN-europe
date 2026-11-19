@@ -260,3 +260,9 @@ __marimo__/
 /tests/integration/erw_smoke/outputs/
 /tests/integration/erw_smoke/_tmp_model/
 /data/raw_data/01-energy_system/worldbank_arable_land/*.csv
+
+# OAE generated functionality-test inputs and solver results
+/tests/integration/oae_smoke/outputs/
+
+# Downloaded Marine Regions source cache
+/data/raw_data/01-energy_system/marine_regions/eez-attributes.json

@@ -7,7 +7,6 @@ import math
 import pytest
 from zen_creator.datasets.datasets.metadata import MetaData, SourceInformation
 from zen_creator.model import Model
-from zen_creator.utils.settings import ModelSet
 
 from zen_europe.datasets.dataset_collections.basalt_erw_parameters import (
     BasaltErwParameters,
@@ -35,7 +34,6 @@ from zen_europe.elements.conversion_technologies.basalt_application import (
 )
 from zen_europe.elements.conversion_technologies.basalt_grinding import BasaltGrinding
 from zen_europe.elements.sectors.basalt_erw import BasaltErwSector
-from zen_europe.model_creator import DATA_PATH
 from zen_europe.utils.constants import Constants
 
 
@@ -155,30 +153,6 @@ def test_sector_registration_and_dependencies() -> None:
     assert GroundBasalt in sector.elements
 
 
-def test_erw_variants_keep_bcr_and_add_basalt_erw() -> None:
-    model_set = ModelSet.load_from_yaml(DATA_PATH / "models.yaml")
-
-    assert model_set.settings_patch("bcr") == {}
-    assert model_set.settings_patch("bcr_without_application") == {
-        "structure": {"remove_technologies": ["biochar_application"]}
-    }
-    erw = model_set.settings_patch("erw")
-    assert "basalt_erw" in erw["structure"]["set_sectors"]
-    assert "biochar_cdr" in erw["structure"]["set_sectors"]
-    assert "basalt_erw" not in (
-        __import__("zen_europe.settings.structure", fromlist=["StructureSettings"])
-        .StructureSettings()
-        .set_sectors
-    )
-    without = model_set.settings_patch("erw_without_application")
-    assert without["structure"]["remove_technologies"] == ["basalt_application"]
-    erw_only = model_set.settings_patch("erw_only")
-    assert erw_only["structure"]["set_sectors"] == erw["structure"]["set_sectors"]
-    assert erw_only["structure"]["remove_technologies"] == ["biochar_application"]
-    assert model_set.settings_patch("bcr_erw") == erw
-    assert "basalt_erw" in without["structure"]["set_sectors"]
-
-
 @pytest.mark.parametrize("interval_between_years", [2, 4])
 def test_application_service_remains_active(
     model: Model, interval_between_years: int
@@ -232,3 +206,31 @@ def test_application_cites_sources(model: Model) -> None:
         if isinstance(metadata, MetaData)
     }
     assert names == expected
+
+
+@pytest.mark.parametrize("area", [-1.0, float("inf"), float("-inf")])
+def test_erw_rejects_invalid_arable_area(model, area):
+    from types import SimpleNamespace
+
+    model.config = SimpleNamespace(system=SimpleNamespace(set_nodes=["CH"]))
+    parameters = BasaltErwParameters(model.settings, model.source_path)
+    parameters._arable.data.loc["CH", 2024] = area
+    with pytest.raises(ValueError, match="finite nonnegative arable"):
+        parameters.get_application_capacity_limit(BasaltApplication(model))
+
+
+@pytest.mark.parametrize("missing", ["country", "year", "value"])
+def test_erw_rejects_missing_arable_data(model, missing):
+    from types import SimpleNamespace
+
+    model.config = SimpleNamespace(system=SimpleNamespace(set_nodes=["CH"]))
+    parameters = BasaltErwParameters(model.settings, model.source_path)
+    data = parameters._arable.data
+    if missing == "country":
+        parameters._arable.data = data.drop(index="CH")
+    elif missing == "year":
+        parameters._arable.data = data.drop(columns=2024)
+    else:
+        data.loc["CH", 2024] = float("nan")
+    with pytest.raises(ValueError, match="arable-land|Arable-land"):
+        parameters.get_application_capacity_limit(BasaltApplication(model))

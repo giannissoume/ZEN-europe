@@ -9,6 +9,7 @@ from .electricity import ElectricitySector
 from .gas import GasSector
 from .heat import HeatSector
 from .hydrogen import HydrogenSector
+from .liming_oae import LimingOaeSector
 from .methanol import MethanolSector
 from .passenger_transport import PassengerTransportSector
 from .refining import RefiningSector
@@ -17,6 +18,7 @@ from .steel import SteelSector
 from .truck_transport import TruckTransportSector
 
 __all__ = [
+    "LimingOaeSector",
     "AmmoniaSector",
     "AviationSector",
     "BasaltErwSector",

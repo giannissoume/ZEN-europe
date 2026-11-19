@@ -34,7 +34,10 @@ class BeerlingBasaltRemoval(Dataset[pd.Series]):
                 "Abstract and Fig. 1D: cumulative field-programme CDR potential "
                 "of 10.5 tCO2/ha for 200 t basalt/ha over four years. The "
                 "ratio, 0.0525 tCO2/t, supplies the unadjusted field potential. "
-                "Downstream efficiency is applied in the parameter collection."
+                "It is inferred from Ca/Mg loss assuming bicarbonate formation, "
+                "not measured completed downstream storage. The paper excludes "
+                "downstream efficiency changes; a separate cross-source chemical "
+                "efficiency proxy is applied in the parameter collection."
             ),
         )
 

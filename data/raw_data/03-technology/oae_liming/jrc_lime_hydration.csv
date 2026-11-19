@@ -1,0 +1,3 @@
+parameter,value,unit,source_location
+stoichiometric_water_t_per_t_cao,0.321,t/t,Section 2.2.6.4.1
+water_multiplier,2,1,Section 2.2.6.4.1
