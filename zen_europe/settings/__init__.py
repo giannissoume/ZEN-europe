@@ -7,6 +7,7 @@ from .biochar_cdr import BiocharCdrSettings  # noqa: F401
 from .cache import CacheSettings  # noqa: F401
 from .cost import CostSettings  # noqa: F401
 from .data_source import DataSourceSettings  # noqa: F401
+from .electrochemical_oae import ElectrochemicalOaeSettings  # noqa: F401
 from .emissions import EmissionsSettings  # noqa: F401
 from .investment import InvestmentSettings  # noqa: F401
 from .liming_oae import LimingOaeSettings  # noqa: F401
@@ -21,6 +22,7 @@ __all__ = [
     "BasaltErwSettings",
     "BiocharCdrSettings",
     "LimingOaeSettings",
+    "ElectrochemicalOaeSettings",
     "TimeSettings",
     "InvestmentSettings",
     "CostSettings",

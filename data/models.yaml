@@ -118,3 +118,51 @@ models:
     settings:
       structure:
         remove_technologies: []
+
+  electrochemical_oae_only:
+    extends: baseline
+    settings:
+      structure:
+        set_sectors:
+          - electricity
+          - biochar_cdr
+          - carbon
+          - gas
+          - heat
+          - district_heating
+          - hydrogen
+          - ammonia
+          - cement
+          - methanol
+          - refining
+          - aviation
+          - shipping
+          - steel
+          - passenger_transport
+          - truck_transport
+          - electrochemical_oae
+
+  bcr_erw_oae_electrochemical:
+    extends: bcr_erw_oae
+    settings:
+      structure:
+        set_sectors:
+          - electricity
+          - biochar_cdr
+          - carbon
+          - gas
+          - heat
+          - district_heating
+          - hydrogen
+          - ammonia
+          - cement
+          - methanol
+          - refining
+          - aviation
+          - shipping
+          - steel
+          - passenger_transport
+          - truck_transport
+          - basalt_erw
+          - liming_oae
+          - electrochemical_oae

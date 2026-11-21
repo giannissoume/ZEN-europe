@@ -1,0 +1,9 @@
+parameter,value,unit
+annual_removal,100000,tCO2/year
+annual_hydrogen,2800,t/year
+rock_requirement,1.5,t/tCO2
+electricity_requirement,2.5,MWh/tCO2
+uptime,0.9,fraction
+installed_cost,165000000,USD
+fixed_opex_fraction,0.03,fraction/year
+rock_price,25,USD/t

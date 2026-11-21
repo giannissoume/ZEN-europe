@@ -27,7 +27,7 @@ with xr.open_dataset(result / "variables.nc") as data:
 
     bcr_tph = coeffs["biochar_forced_mw"] / (25 / 3.6)
     erw_tph = coeffs["forced_rate"]
-    bcr_gw = input_flow("biochar_application", "biochar")
+    bcr_gw = input_flow("biochar_application", "biochar_for_application")
     np.testing.assert_allclose(bcr_gw, coeffs["biochar_forced_mw"] / 1000, rtol=1e-6)
     np.testing.assert_allclose(
         input_flow("biochar_application", "truck_mileage"),

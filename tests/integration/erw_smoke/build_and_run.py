@@ -99,7 +99,9 @@ def build_dataset(
         "use_rolling_horizon": False,
     }
     if include_biochar:
-        config["settings"]["structure"]["set_carriers"].append("biochar")
+        config["settings"]["structure"]["set_carriers"].append(
+            "biochar_for_application"
+        )
         config["settings"]["structure"]["set_conversion_technologies"].append(
             "biochar_application"
         )
@@ -201,7 +203,7 @@ def build_dataset(
         # The production biochar carrier still prohibits imports.
         from zen_europe.utils.constants import Constants
 
-        biochar = model.elements["biochar"]
+        biochar = model.elements["biochar_for_application"]
         biochar.availability_import.set_data(
             default_value=math.inf, unit="MW", source=source
         )

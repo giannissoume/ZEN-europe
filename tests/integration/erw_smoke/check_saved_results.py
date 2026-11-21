@@ -104,7 +104,7 @@ with (
     if c["enabled"] or "biochar_forced_mw" in c:
         expected_carriers.update({"diesel", "truck_mileage"})
     if "biochar_forced_mw" in c:
-        expected_carriers.add("biochar")
+        expected_carriers.add("biochar_for_application")
     assert set(ds.coords["set_carriers"].values) == expected_carriers
     for carrier, expected in imports_expected.items():
         if carrier not in expected_carriers:

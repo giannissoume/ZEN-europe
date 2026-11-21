@@ -6,6 +6,7 @@ from .carbon import CarbonSector
 from .cement import CementSector
 from .district_heating import DistrictHeatingSector
 from .electricity import ElectricitySector
+from .electrochemical_oae import ElectrochemicalOaeSector
 from .gas import GasSector
 from .heat import HeatSector
 from .hydrogen import HydrogenSector
@@ -27,6 +28,7 @@ __all__ = [
     "CementSector",
     "DistrictHeatingSector",
     "ElectricitySector",
+    "ElectrochemicalOaeSector",
     "GasSector",
     "HeatSector",
     "HydrogenSector",
